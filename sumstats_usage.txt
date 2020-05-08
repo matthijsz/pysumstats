@@ -53,8 +53,8 @@ exc_meta.head()
 exc_meta.head(n_chromosomes=23)
 
 # QQ and Manhattan plots of the result
-qqman.manhattan(exc, filename='meta_manhattan.png')
-qqman.qqplot(exc['p'].values, filename='meta_qq.png')
+sumstats.plot.manhattan(exc, filename='meta_manhattan.png')
+sumstats.plot.qqplot(exc['p'].values, filename='meta_qq.png')
 
 # Save the result as csv
 exc.save('exc_sumstats.csv')

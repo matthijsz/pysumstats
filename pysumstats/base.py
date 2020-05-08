@@ -2,6 +2,7 @@ import pandas as pd
 import warnings
 import pickle
 import os
+import copy
 import numpy as np
 
 
@@ -129,6 +130,9 @@ class _BaseSumStats:
                     self.data[c] = data
             else:
                 raise IndexError('Length of input ({}) does not match data length ({}).'.format(len(value), len(self)))
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def close(self):
         if not self.low_ram:
