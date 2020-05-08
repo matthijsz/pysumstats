@@ -25,6 +25,12 @@ class _H5SSConnection:
         if not os.path.isdir(tmpdir):
             os.makedirs(tmpdir)
         self.path = '{}/{}'.format(tmpdir, filename)
+        if os.path.isfile(self.path):
+            suffix = 1
+            while os.path.isfile(self.path + str(suffix)):
+                suffix += 1
+            self.path += str(suffix)
+
 
     def __getitem__(self, item):
         return pd.read_hdf(self.path, key='chr' + str(item))
