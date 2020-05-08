@@ -1,4 +1,5 @@
 #Patch notes
+
 #####08-05-2020 (v0.1)
  - Adapted to be a package rather then a module.
  - Added `low_ram` argument to SumStats to read/write data to disk rather than RAM, in case of memory issues.  
