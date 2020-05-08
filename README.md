@@ -1,8 +1,10 @@
 # Patch notes
 
 ##### 08-05-2020 (v0.1)
+
  - Adapted to be a package rather then a module.
  - Added `low_ram` argument to SumStats to read/write data to disk rather than RAM, in case of memory issues.  
+
 
 # Description
 
@@ -17,3 +19,8 @@ Note merging with low_memory enabled is still highly experimental.
 
 See sumstats_usage.txt for example usage.
 
+# Installation
+
+This package was made for Python 3.7. Clone the package directly from this github, or install with 
+
+`pip3 install pysumstats`

@@ -1,8 +1,10 @@
 # Compiled python modules.
 *.pyc
+.pypirc
 
 # Setuptools distribution folder.
 /dist/
+/build/
 /.idea/
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
