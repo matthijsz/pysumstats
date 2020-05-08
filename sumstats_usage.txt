@@ -1,0 +1,100 @@
+import pysumstats as sumstats
+import qqman
+
+# Reading files
+ntr_exc = sumstats.SumStats("Z:/MRDATA/NTR_MET/results_MET_Total.csv.gz", phenotype='ntr_exc')
+# Reading data without sample size column: you will manually have to specify gwas sample size
+ukb_ssoe = sumstats.SumStats("Z:/MRDATA/Klimentidis/SSOE_350492.txt.gz", phenotype='ukb_ssoe', gwas_n=350492)
+# Reading data with column names not automatically recognized:
+gpc_neuro = sumstats.SumStats("Z:/MRDATA/GPC_Neuro/Neuro_fixed.csv", phenotype='gpc_neuro',
+                              column_names={
+                                    'rsid': 'weird_name_for_rsid',
+                                    'chr': 'weird_name_for_chr',
+                                    'bp': 'weird_name_for_bp',
+                                    'ea': 'weird_name_for_ea',
+                                    'oa': 'weird_name_for_oa',
+                                    'maf': 'weird_name_for_maf',
+                                    'b': 'weird_name_for_b',
+                                    'se': 'weird_name_for_se',
+                                    'p': 'weird_name_for_p',
+                                    'hwe': 'weird_name_for_p_hwe',
+                                    'info': 'weird_name_for_info',
+                                    'n': 'weird_name_for_n',
+                                    'eaf': 'weird_name_for_eaf',
+                                    'oaf': 'weird_name_for_oaf'})
+# Performing qc
+gpc_neuro.qc(maf=.01)
+ntr_exc.qc(maf=.01, hwe=1e-6, info=.9)
+ukb_ssoe.qc()  # MAF .01 is the default
+
+# Merging sumstats, low_memory option is still experimental so be carefull with that
+exc = ntr_exc.merge(ukb_ssoe)
+
+# Meta analysis
+exc_meta = exc.meta_analyze(name='exc', method='samplesize')  # N-weighted meta analysis
+exc_meta = exc.meta_analyze(name='exc', method='ivw')  # Standard inverse-variance weighted meta analysis
+exc_meta = exc.gwama(name='exc', method='ivw')  # Bart/Hill-style GWAMA analysis
+# Additionally supports adding SNP heritabilities as weights
+exc_meta = exc.gwama(h2_snp={'ntr_exc': .01, 'ukb_ssoe': .02}, name='exc', method='ivw')
+# And your own covariance matrix (called cov_Z in most R scripts)
+# Either read it from a file:
+import pandas as pd
+cov_z = pd.read_csv('my_cov_z.csv') # Note it should be pandas dataframe with column names and index names equal to your phenotypes
+# Or generate it from a phenotype file yourself:
+phenotypes = pd.read_csv('my_phenotype_file.csv')
+cov_z = sumstats.cov_matrix_from_phenotype_file(phenotypes, phenotypes=['phenotype1', 'phenotype2'])
+exc_meta = exc.gwama(cov_matrix=cov_z, h2_snp={'ntr_exc': .01, 'ukb_ssoe': .02}, name='exc', method='ivw')
+
+# See a summary of the result
+exc_meta.describe()
+# See head of the data
+exc_meta.head()
+# See head of all chromosomes
+exc_meta.head(n_chromosomes=23)
+
+# QQ and Manhattan plots of the result
+qqman.manhattan(exc, filename='meta_manhattan.png')
+qqman.qqplot(exc['p'].values, filename='meta_qq.png')
+
+# Save the result as csv
+exc.save('exc_sumstats.csv')
+# Save the result as a pickle file (way faster to save and load back into Python)
+exc.save('exc_sumstats.pickle')
+
+# Merge gwama results with another file:
+merged = exc.merge(gpc_neuro)
+# Save prepped files for MR analysis in R:
+exc.prep_for_mr(exposure='gpc_neuro', outcome='exc',
+                   filename=['Neuro-Exc.csv', 'Exc-Neuro.csv'],
+                   p_cutoff=5e-8, bidirectional=True, index=False)
+# These will have the following column names, per specification of the MendelianRandomization package in R:
+# rsid	chr	bp	exposure.A1	exposure.A2	outcome.A1	outcome.A2	exposure.se	exposure.b	outcome.se	outcome.b
+
+# Some other stuff:
+# See column names of the file
+gpc_neuro.columns
+
+# SumStats support for standard indexing is growing:
+exc[0]  # Get the full output of the first SNP
+exc[:10]  # Get the full output of the first 10 SNPs
+exc[:10, 'p']  # Get the p value of the first 10 SNPs
+exc['p']  # Get the p values of all SNPs
+exc['rs78948828']  # Get the full output of 1 specific rsid
+exc[['rs78948828', 'rs6057089', 'rs55957973']]  # Get the full output of multiple specific rsids
+exc[['rs78948828', 'rs6057089', 'rs55957973'], 'p']  # Get the p-value for specific rsids
+
+# If for whatever reason you want to do stuff with each SNP individually you can also loop over the entire file
+for snp_output in exc:
+    if exc['p'] < 5e-8:
+        print('Yay significant SNP!')
+    # do something
+
+
+# If you only want to loop over some specific columns, you can
+for rsid, b, se, p in exc[['rsid', 'b', 'se', 'p']].values:
+    if p < 5e-8:
+        print('Yay significant SNP!')
+
+
+
+
