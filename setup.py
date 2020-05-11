@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pysumstats',
-      version='0.2',
+      version='0.2.1',
       description='Package for working with GWAS summary statistics',
       long_description='Python package for reading, combining, meta-analyzing, and saving GWAS summary statistics data.',
       keywords='gwas summary statistics genetics',

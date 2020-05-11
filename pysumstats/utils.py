@@ -3,6 +3,14 @@ import numpy as np
 
 
 def cov_matrix_from_phenotype_file(dataframe, phenotypes=None):
+    '''
+    Function to generate a covariance (cov_Z) matrix from a phenotype file
+    :param dataframe: pd.Dataframe containing phenotypic data
+    :type dataframe: pd.Dataframe
+    :param phenotypes: list of phenotypes to include
+    :type phenotypes: list.
+    :return: pd.Dataframe of covariance matrix, ready to use in the MergedSumstats.gwama() function.
+    '''
     if phenotypes is None:
         phenotypes = list(dataframe.columns)
     cov_matrix = pd.DataFrame(0, index=phenotypes, columns=phenotypes)

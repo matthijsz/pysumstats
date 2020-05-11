@@ -8,8 +8,29 @@ from .base import _BaseSumStats, _H5SSConnection
 
 
 class MergedSumStats(_BaseSumStats):
+    '''
+    Class containing merged summary statistics. In general you will not create a MergedSumStats object manually
+    :param data: dataset containing merged summary statistics
+    :type data: dict.
+    :param phenotypes: list of phenotype names.
+    :type phenotypes: list.
+    :param merge_info: Dict with information on the merge
+    :type merge_info: dict.
+    :param variables: list of variables contained in the data.
+    :type variables: list
+    :param xy: x and y suffixes (to be used in _allign)
+    :type xy: list
+    :param low_ram: Whether to use the low_ram option for this MergedSumStats object (passed down from SumStats). Use this only when running into MemoryErrors.
+    Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
+    :type low_ram: bool
+    :param tmpdir: Which directory to store the temporary files if low_ram is enabled (passed down from SumStats).
+    :type tmpdir: str.
+    :param allign: Enable to auto-allign SNPs
+    :type allign: bool.
+    '''
     def __init__(self, data, phenotypes, merge_info, variables, xy, low_ram=False, tmpdir='sumstats_temporary',
                  allign=True):
+
         super().__init__()
         self.pheno_names = phenotypes
         self.data = data
@@ -25,6 +46,12 @@ class MergedSumStats(_BaseSumStats):
         self.tmpdir = tmpdir
 
     def _allign(self, ynames=None):
+        '''
+        Function to allign SNPs to the first phenotype.
+        :param ynames: Optional argument of multiple phenotypes that should be alligned.
+        :type ynames: list.
+        :return: None, alligned data is stored inplace.
+        '''
         if self.suffixes[0] is None:
             suffix_x = ''
         else:
@@ -66,6 +93,14 @@ class MergedSumStats(_BaseSumStats):
         self.suffixes = [None, None]
 
     def meta_analyze(self, name='meta', method='ivw'):
+        '''
+        Meta analyze all GWAS summary statistics contained in this object.
+        :param name: New phenotype name to use for the new SumStats object (default: 'meta')
+        :type name: str.
+        :param method: Meta-analysis method to use, should be one of ['ivw', 'samplesize'], default: 'ivw'
+        :type method: str.
+        :return: SumStats object containing meta analysis results.
+        '''
         if not self.low_ram:
             new_data = {}
         else:
@@ -100,6 +135,15 @@ class MergedSumStats(_BaseSumStats):
         return new_data
 
     def gwama(self, cov_matrix=None, h2_snp=None, name='gwama'):
+        '''
+        Multivariate meta analysis as described in Baselmans, et al. 2019.
+        :param cov_matrix: Covariance matrix, defaults to generating a correlation matrix of Z-scores
+        :type cov_matrix: pd.Dataframe
+        :param h2_snp: Dict of SNP heritabilities per GWAS, to use as additional weights. Defaults to all 1's.
+        :type h2_snp: dict.
+        :param name: New phenotype name to use in the new SumStats object (default: 'gwama')
+        :return: SumStats object.
+        '''
         if h2_snp is None:
             warnings.warn('h2-snp not specified, using ones instead. This will bias the estimates')
             h2_snp = {x: 1 for x in self.pheno_names}
@@ -177,6 +221,18 @@ class MergedSumStats(_BaseSumStats):
         return new_data
 
     def merge(self, other, inplace=False, low_memory=False):
+        '''
+        Merge with other SumStats or MergedSumstats object(s)
+        :param other: SumStats, MergedSumstats object, or a list of SumStats, MergedSumstats objects
+        :type other: SumStats, MergedSumStats, or list.
+        :param inplace: Enable to store the new data in the current MergedSumStats object. (currently not supported when low_ram is enabled)
+        :type inplace: bool.
+        :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
+        :type low_memory: bool.
+        :return: MergedSumStats object.
+        '''
+        if self.low_ram and inplace:
+            return NotImplementedError('Merging inplace when low_ram is enabled is currently not supported.')
         if isinstance(other, list):
             if inplace:
                 for o in other:
@@ -279,6 +335,14 @@ class MergedSumStats(_BaseSumStats):
                     return newmergedss
 
     def describe(self, columns=None, per_chromosome=False):
+        '''
+        Get a summary of the data.
+        :param columns: List of column names to print summary for (default: ['b', 'se', 'p'])
+        :type columns: list.
+        :param per_chromosome: Enable to return a list of summary dataframes per chromosome
+        :type per_chromosome: bool.
+        :return: pd.Dataframe, or list of pd.Dataframes containing data summary
+        '''
         if columns is None:
             columns = ['b', 'se', 'p']
         if (not isinstance(columns, list)) and isinstance(columns, str):
@@ -294,6 +358,21 @@ class MergedSumStats(_BaseSumStats):
         return self._get_summary(sum_cols, per_chromosome)
 
     def prep_for_mr(self, exposure, outcome, filename=None, p_cutoff=None, bidirectional=False, **kwargs):
+        '''
+        Save a pre-formatted file to use with the MendelianRandomization package in R.
+        :param exposure: phenotype name to use as exposure.
+        :type exposure: str.
+        :param outcome: phenotype name to use as outcome.
+        :type outcome: str.
+        :param filename: Path to where the resulting file(s) should be stored, or list of paths is bidirectional=True
+        :type filename: str or list.
+        :param p_cutoff: Optional p-value cut-off to apply. Will include SNPs where P > p_cutoff
+        :type p_cutoff: float.
+        :param bidirectional: Enable to store two files (exposure=exposure, outcome=outcome), and (exposure=outcome, outcome=exposure)
+        :type bidirectional: bool.
+        :param kwargs: Additional keyword arguments to be passed to pandas to_csv function.
+        :return: None, resulting data is stored on local storage.
+        '''
         if bidirectional and (not isinstance(filename, list)):
             raise ValueError(
                 'If bidirectional, filename should be a list of filenames: (exp-outcome)-name and (outcome-exp) name.')

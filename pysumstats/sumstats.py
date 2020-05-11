@@ -9,6 +9,25 @@ pd.options.mode.chained_assignment = None
 
 
 class SumStats(_BaseSumStats):
+    '''
+    Class for summary statistics of a single GWAS.
+    :param path: Path to the file containing summary statistics. Should be a csv, or tab-delimited txt-file (.gz supported)
+    :type path: str.
+    :param phenotype: Phenotype name
+    :type phenotype: str.
+    :param gwas_n: Optional N subjects in the GWAS, for N-based meta analysis (if there is no N column in the summary statistics)
+    :type gwas_n: int
+    :param column_names: Optional dictionary of column names, if these are not automatically recognised. Keys should be:
+    ['rsid', 'chr', 'bp', 'ea', 'oa', 'maf', 'b', 'se', 'p', 'hwe', 'info', 'n', 'eaf', 'oaf']
+    :type column_names: dict.
+    :param data: Dataset for the new SumStats object, in general, don't specify this.
+    :type data: dict.
+    :param low_ram: Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors.
+    Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
+    :type low_ram: bool.
+    :param tmpdir: Which directory to store the temporary files if low_ram is enabled.
+    :type tmpdir: str.
+    '''
     def __init__(self, path, phenotype=None, gwas_n=None, column_names=None, data=None, low_ram=False,
                  tmpdir='sumstats_temporary'):
         super().__init__()
@@ -37,6 +56,10 @@ class SumStats(_BaseSumStats):
         self.columns = self.data[1].columns
 
     def _sync_colnames(self):
+        '''
+        Internal function to synchronize column names with the defaults
+        :return: None. Renamed data is stored inplace.
+        '''
         self.data.columns = [x.lower() for x in self.data.columns]
         if (len(self.data.columns)) != len(list(set(self.data.columns))):
             raise KeyError('Duplicate column names not allowed! (not case-sensitive)')
@@ -113,6 +136,10 @@ class SumStats(_BaseSumStats):
         self.variables = list(self.data.columns)
 
     def _split(self):
+        '''
+        Internal function to split the initial large dataset into chunks based on chromosome
+        :return: None. Split data is stored inplace.
+        '''
         try:
             self.data['chr'] = self.data['chr'].astype(int)
         except ValueError:
@@ -132,6 +159,13 @@ class SumStats(_BaseSumStats):
         self.data = new_data
 
     def qc(self, maf=None, hwe=None, info=None):
+        '''
+        Basic GWAS quality control function.
+        :param maf: Minor allele frequency cutoff, will drop SNPs where MAF < cutoff. Default: 0.1
+        :param hwe: Hardy-Weinberg Equilibrium cutoff, will drop SNPs where HWE < cutoff, if specified and HWE column is present in the data.
+        :param info: Imputation quality cutoff, will drop SNPs where Info < cutoff, if specified and Info column is present in the data.
+        :return: None. Data is stored inplace
+        '''
         qc_vals = dict(maf=.01)
         qc_info = dict(org_len=0, maf=0, new_len=0)
         if maf is not None:
@@ -160,6 +194,14 @@ class SumStats(_BaseSumStats):
         self.qc_result = qc_info
 
     def merge(self, other, low_memory=False):
+        '''
+        Merge with other SumStats object(s).
+        :param other: Other sumstats object, or list of other SumStats objects.
+        :type other: SumStats or list.
+        :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
+        :type low_memory: bool.
+        :return: MergedSumstats object.
+        '''
         if isinstance(other, list):
             merged = self.merge(other[0], low_memory=low_memory)
             merged.merge(other[1:], inplace=True, low_memory=low_memory)
@@ -221,6 +263,14 @@ class SumStats(_BaseSumStats):
                                   tmpdir=self.tmpdir)
 
     def describe(self, columns=None, per_chromosome=False):
+        '''
+        Get a summary of the data.
+        :param columns: List of column names to print summary for (default: ['b', 'se', 'p'])
+        :type columns: list.
+        :param per_chromosome: Enable to return a list of summary dataframes per chromosome
+        :type per_chromosome: bool.
+        :return: pd.Dataframe, or list of pd.Dataframes containing data summary
+        '''
         if columns is None:
             columns = ['b', 'se', 'p']
         if (not isinstance(columns, list)) and isinstance(columns, str):
