@@ -4,6 +4,7 @@
 
  - Added `return` statement to MergedSumstats.merge() when `inplace=False` and merging with other MergedSumstats.
  - Added docstrings to base, mergedsumstats, sumstats and utils.
+ - Added [docs](https://pysumstats.readthedocs.io/en/latest/)
 
 ##### 08-05-2020 (v0.2)
 
