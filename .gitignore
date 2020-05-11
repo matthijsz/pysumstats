@@ -5,3 +5,6 @@
 /.idea/
 /*.egg-info
 /*.egg
+Makefile
+make.bat
+/source/
