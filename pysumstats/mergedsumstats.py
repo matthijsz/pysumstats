@@ -276,6 +276,7 @@ class MergedSumStats(_BaseSumStats):
                                                  merge_info={}, xy=['x', 'y'], variables=self.variables,
                                                  low_ram=self.low_ram, tmpdir=self.tmpdir, allign=False)
                     newmergedss._allign(ynames=['_{}'.format(x) for x in other.pheno_names])
+                    return newmergedss
 
     def describe(self, columns=None, per_chromosome=False):
         if columns is None:
