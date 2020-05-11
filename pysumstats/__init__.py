@@ -5,6 +5,5 @@ pysumstats, a python package for working with GWAS summary statistics
 '''
 from .sumstats import SumStats
 from .utils import cov_matrix_from_phenotype_file
-from .plot import *
-
+from . import plot
 __all__ = ['SumStats', 'cov_matrix_from_phenotype_file']
