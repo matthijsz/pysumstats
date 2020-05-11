@@ -1,10 +1,11 @@
 # Patch notes
 
-##### 11-05-2020 (v0.2.1)
+##### 11-05-2020 (v0.2.3)
 
  - Added `return` statement to MergedSumstats.merge() when `inplace=False` and merging with other MergedSumstats.
  - Added docstrings to base, mergedsumstats, sumstats and utils.
  - Added [docs](https://pysumstats.readthedocs.io/en/latest/)
+ - Fixed import errors and added `manhattan` and `qq` function to `SumStats` class
 
 ##### 08-05-2020 (v0.2)
 

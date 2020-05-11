@@ -296,6 +296,14 @@ class SumStats(_BaseSumStats):
         """
         manhattan(self[['rsid', 'chr', 'bp', 'p']], **kwargs)
 
+    def qqplot(self, **kwargs):
+        """Generate a QQ-plot using this sumstats data
+
+        :param kwargs: keyworded arguments to be passed to :func:`pysumstats.plot.qqplot`
+        :return: None, or (fig, ax)
+
+        """
+        qqplot(self[['rsid', 'chr', 'bp', 'p']], **kwargs)
 
 class MergedSumStats(_BaseSumStats):
     """Class containing merged summary statistics. In general you will not create a MergedSumStats object manually.

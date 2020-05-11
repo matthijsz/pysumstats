@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pysumstats',
-      version='0.2.1',
+      version='0.2.3',
       description='Package for working with GWAS summary statistics',
       long_description='Python package for reading, combining, meta-analyzing, and saving GWAS summary statistics data.',
       keywords='gwas summary statistics genetics',
@@ -9,7 +9,7 @@ setup(name='pysumstats',
       author='Matthijs D. van der Zee',
       author_email='m.d.vander.zee@vu.nl',
       license='MIT',
-      packages=['pysumstats'],
+      packages=['pysumstats', 'pysumstats.plot'],
       install_requires=[
           'pandas',
           'tables',
