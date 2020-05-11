@@ -1,5 +1,10 @@
 # Patch notes
 
+##### 11-05-2020 (v0.2.1)
+
+ - Added `return` statement to MergedSumstats.merge() when `inplace=False` and merging with other MergedSumstats.
+ - Added docstrings to base, mergedsumstats, sumstats and utils.
+
 ##### 08-05-2020 (v0.2)
 
  - Added `plot` subpackage with `qqplot` and `manhattan`,  from  my initial [Python-QQMan module](https://github.com/matthijsz/qqman).
