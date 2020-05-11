@@ -1,7 +1,3 @@
-.. toctree::
-   :maxdepth: 2
-
-
 
 Plotting
 =========================

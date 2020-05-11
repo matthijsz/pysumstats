@@ -1,8 +1,5 @@
 .. automodule:: pysumstats
 
-.. toctree::
-   :maxdepth: 2
-
 SumStats
 =========================
 .. autoclass:: pysumstats::SumStats
