@@ -1,0 +1,562 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SumStats &#8212; pysumstats 0.2.1 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Plotting" href="../plotting/plotting.html" />
+    <link rel="prev" title="Welcome to pysumstats’s documentation!" href="../index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../plotting/plotting.html" title="Plotting"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to pysumstats’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">pysumstats 0.2.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <span class="target" id="module-pysumstats"></span><p>pysumstats, a python package for working with GWAS summary statistics</p>
+<div class="toctree-wrapper compound">
+</div>
+<div class="section" id="sumstats">
+<h1>SumStats<a class="headerlink" href="#sumstats" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="pysumstats.SumStats">
+<em class="property">class </em><code class="sig-prename descclassname">pysumstats.</code><code class="sig-name descname">SumStats</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">phenotype</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">gwas_n</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">column_names</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">low_ram</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">tmpdir</span><span class="o">=</span><span class="default_value">'sumstats_temporary'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for summary statistics of a single GWAS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str.</em>) – Path to the file containing summary statistics. Should be a csv, or tab-delimited txt-file (.gz supported).</p></li>
+<li><p><strong>phenotype</strong> (<em>str.</em>) – Phenotype name</p></li>
+<li><p><strong>gwas_n</strong> (<em>int</em>) – Optional N subjects in the GWAS, for N-based meta analysis (if there is no N column in the summary statistics)</p></li>
+<li><p><strong>column_names</strong> (<em>dict.</em>) – Optional dictionary of column names, if these are not automatically recognised. Keys should be: [‘rsid’, ‘chr’, ‘bp’, ‘ea’, ‘oa’, ‘maf’, ‘b’, ‘se’, ‘p’, ‘hwe’, ‘info’, ‘n’, ‘eaf’, ‘oaf’]</p></li>
+<li><p><strong>data</strong> (<em>dict.</em>) – Dataset for the new SumStats object, in general, don’t specify this.</p></li>
+<li><p><strong>low_ram</strong> (<em>bool.</em>) – Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.</p></li>
+<li><p><strong>tmpdir</strong> (<em>str.</em>) – Which directory to store the temporary files if low_ram is enabled.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="pysumstats.SumStats.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close connection to and HDF5 file if low_ram is specified</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.copy" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a deepcopy of the existing opject</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.describe">
+<code class="sig-name descname">describe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">columns</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">per_chromosome</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.describe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a summary of the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> (<em>list.</em>) – List of column names to print summary for (default: [‘b’, ‘se’, ‘p’])</p></li>
+<li><p><strong>per_chromosome</strong> (<em>bool.</em>) – Enable to return a list of summary dataframes per chromosome</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>pd.Dataframe, or list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.groupby">
+<code class="sig-name descname">groupby</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.groupby" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compatibility function to create pandas grouped object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> – arguments to be passed to pandas groupby function</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas groupby function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a full grouped pandas dataframe object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.head">
+<code class="sig-name descname">head</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">n_chromosomes</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.head" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints (n_chromosomes) dataframes with the first n rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int.</em>) – number of rows to show</p></li>
+<li><p><strong>n_chromosomes</strong> (<em>int.</em>) – number of chromosomes to show.</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas head function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.manhattan">
+<code class="sig-name descname">manhattan</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.manhattan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a manhattan plot using this sumstats data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>kwargs</strong> – keyworded arguments to be passed to <a class="reference internal" href="../plotting/plotting.html#pysumstats.plot.manhattan" title="pysumstats.plot.manhattan"><code class="xref py py-func docutils literal notranslate"><span class="pre">pysumstats.plot.manhattan()</span></code></a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None, or (fig, ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.merge">
+<code class="sig-name descname">merge</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em>, <em class="sig-param"><span class="n">low_memory</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.merge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge with other SumStats object(s).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>other</strong> (<a class="reference internal" href="#pysumstats.SumStats" title="pysumstats.SumStats"><em>SumStats</em></a><em> or </em><em>list.</em>) – Other sumstats object, or list of other SumStats objects.</p></li>
+<li><p><strong>low_memory</strong> (<em>bool.</em>) – Enable to use a more RAM-efficient merging method (WARNING: still untested)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>MergedSumstats object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.qc">
+<code class="sig-name descname">qc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">maf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">hwe</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">info</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.qc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basic GWAS quality control function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>maf</strong> – Minor allele frequency cutoff, will drop SNPs where MAF &lt; cutoff. Default: 0.1</p></li>
+<li><p><strong>hwe</strong> – Hardy-Weinberg Equilibrium cutoff, will drop SNPs where HWE &lt; cutoff, if specified and HWE column is present in the data.</p></li>
+<li><p><strong>info</strong> – Imputation quality cutoff, will drop SNPs where Info &lt; cutoff, if specified and Info column is present in the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None. Data is stored inplace</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.reset_index">
+<code class="sig-name descname">reset_index</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.reset_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset the index of the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">per_chromosome</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the data held in this object to local storage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str.</em>) – Relative or full path to the target file to store the data or object in. Paths ending in .pickle will save a pickled version of the full object. Note that with low_ram enabled this will <strong>not</strong> store the data.</p></li>
+<li><p><strong>per_chromosome</strong> (<em>bool.</em>) – Whether to save seperate files for each chromosome.</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas to_csv() function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.sort_values">
+<code class="sig-name descname">sort_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">by</span></em>, <em class="sig-param"><span class="n">inplace</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.sort_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sorts values in the dataframe. Note: Sorting by chromosme (chr) will have no effect as data is already structured by chromosome.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>by</strong> – label of the column to sort values by</p></li>
+<li><p><strong>inplace</strong> (<em>bool.</em>) – Whether to return the sorted object or sort values within existing object. (Currently only inplace sorting is supported)</p></li>
+<li><p><strong>kwargs</strong> – Other keyword arguments to be passed to pandas sort_values function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Typpe by</dt>
+<dd class="field-even"><p>str.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.SumStats.tail">
+<code class="sig-name descname">tail</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">n_chromosomes</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.SumStats.tail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints (n_chromosomes) dataframes with the last n rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int.</em>) – number of rows to show</p></li>
+<li><p><strong>n_chromosomes</strong> (<em>int.</em>) – number of chromosomes to show.</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas tail function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="mergedsumstats">
+<h1>MergedSumStats<a class="headerlink" href="#mergedsumstats" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="pysumstats.MergedSumStats">
+<em class="property">class </em><code class="sig-prename descclassname">pysumstats.</code><code class="sig-name descname">MergedSumStats</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">phenotypes</span></em>, <em class="sig-param"><span class="n">merge_info</span></em>, <em class="sig-param"><span class="n">variables</span></em>, <em class="sig-param"><span class="n">xy</span></em>, <em class="sig-param"><span class="n">low_ram</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">tmpdir</span><span class="o">=</span><span class="default_value">'sumstats_temporary'</span></em>, <em class="sig-param"><span class="n">allign</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class containing merged summary statistics. In general you will not create a MergedSumStats object manually.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>dict.</em>) – dataset containing merged summary statistics</p></li>
+<li><p><strong>phenotypes</strong> (<em>list.</em>) – list of phenotype names.</p></li>
+<li><p><strong>merge_info</strong> (<em>dict.</em>) – Dict with information on the merge</p></li>
+<li><p><strong>variables</strong> (<em>list</em>) – list of variables contained in the data.</p></li>
+<li><p><strong>xy</strong> (<em>list</em>) – x and y suffixes (to be used in _allign)</p></li>
+<li><p><strong>low_ram</strong> (<em>bool</em>) – Whether to use the low_ram option for this MergedSumStats object (passed down from SumStats). Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.</p></li>
+<li><p><strong>tmpdir</strong> (<em>str.</em>) – Which directory to store the temporary files if low_ram is enabled (passed down from SumStats).</p></li>
+<li><p><strong>allign</strong> (<em>bool.</em>) – Enable to auto-allign SNPs</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close connection to and HDF5 file if low_ram is specified</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.copy" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a deepcopy of the existing opject</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.describe">
+<code class="sig-name descname">describe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">columns</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">per_chromosome</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.describe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a summary of the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> (<em>list.</em>) – List of column names to print summary for (default: [‘b’, ‘se’, ‘p’])</p></li>
+<li><p><strong>per_chromosome</strong> (<em>bool.</em>) – Enable to return a list of summary dataframes per chromosome</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>pd.Dataframe, or list of pd.Dataframes containing data summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.groupby">
+<code class="sig-name descname">groupby</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.groupby" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compatibility function to create pandas grouped object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> – arguments to be passed to pandas groupby function</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas groupby function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a full grouped pandas dataframe object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.gwama">
+<code class="sig-name descname">gwama</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cov_matrix</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">h2_snp</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">'gwama'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.gwama" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multivariate meta analysis as described in Baselmans, et al. 2019.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cov_matrix</strong> (<em>pd.Dataframe.</em>) – Covariance matrix, defaults to generating a correlation matrix of Z-scores</p></li>
+<li><p><strong>h2_snp</strong> (<em>dict.</em>) – Dict of SNP heritabilities per GWAS, to use as additional weights. Defaults to all 1’s.</p></li>
+<li><p><strong>name</strong> – New phenotype name to use in the new SumStats object (default: ‘gwama’)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><a class="reference internal" href="#pysumstats.SumStats" title="pysumstats.SumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.SumStats</span></code></a> object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.head">
+<code class="sig-name descname">head</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">n_chromosomes</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.head" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints (n_chromosomes) dataframes with the first n rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int.</em>) – number of rows to show</p></li>
+<li><p><strong>n_chromosomes</strong> (<em>int.</em>) – number of chromosomes to show.</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas head function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.merge">
+<code class="sig-name descname">merge</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em>, <em class="sig-param"><span class="n">inplace</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">low_memory</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.merge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge with other SumStats or MergedSumstats object(s).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>other</strong> (<a class="reference internal" href="#pysumstats.SumStats" title="pysumstats.SumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.SumStats</span></code></a>, <a class="reference internal" href="#pysumstats.MergedSumStats" title="pysumstats.MergedSumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.MergedSumStats</span></code></a>, or list.) – <a class="reference internal" href="#pysumstats.SumStats" title="pysumstats.SumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.SumStats</span></code></a>, or <a class="reference internal" href="#pysumstats.MergedSumStats" title="pysumstats.MergedSumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.MergedSumStats</span></code></a> object, or a list of SumStats, MergedSumstats objects</p></li>
+<li><p><strong>inplace</strong> (<em>bool.</em>) – Enable to store the new data in the current MergedSumStats object. (currently not supported when low_ram is enabled)</p></li>
+<li><p><strong>low_memory</strong> (<em>bool.</em>) – Enable to use a more RAM-efficient merging method (WARNING: still untested)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><a class="reference internal" href="#pysumstats.MergedSumStats" title="pysumstats.MergedSumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.MergedSumStats</span></code></a> object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.meta_analyze">
+<code class="sig-name descname">meta_analyze</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">'meta'</span></em>, <em class="sig-param"><span class="n">method</span><span class="o">=</span><span class="default_value">'ivw'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.meta_analyze" title="Permalink to this definition">¶</a></dt>
+<dd><p>Meta analyze all GWAS summary statistics contained in this object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str.</em>) – New phenotype name to use for the new SumStats object (default: ‘meta’)</p></li>
+<li><p><strong>method</strong> (<em>str.</em>) – Meta-analysis method to use, should be one of [‘ivw’, ‘samplesize’], default: ‘ivw’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><a class="reference internal" href="#pysumstats.SumStats" title="pysumstats.SumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.SumStats</span></code></a> object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.prep_for_mr">
+<code class="sig-name descname">prep_for_mr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exposure</span></em>, <em class="sig-param"><span class="n">outcome</span></em>, <em class="sig-param"><span class="n">filename</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">p_cutoff</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bidirectional</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.prep_for_mr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a pre-formatted file to use with the MendelianRandomization package in R.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>exposure</strong> (<em>str.</em>) – phenotype name to use as exposure.</p></li>
+<li><p><strong>outcome</strong> (<em>str.</em>) – phenotype name to use as outcome.</p></li>
+<li><p><strong>filename</strong> (<em>str</em><em> or </em><em>list.</em>) – Path to where the resulting file(s) should be stored, or list of paths is bidirectional=True</p></li>
+<li><p><strong>p_cutoff</strong> (<em>float.</em>) – Optional p-value cut-off to apply. Will include SNPs where P &gt; p_cutoff</p></li>
+<li><p><strong>bidirectional</strong> (<em>bool.</em>) – Enable to store two files (exposure=exposure, outcome=outcome), and (exposure=outcome, outcome=exposure)</p></li>
+<li><p><strong>kwargs</strong> – Additional keyword arguments to be passed to pandas to_csv function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None, resulting data is stored on local storage.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.reset_index">
+<code class="sig-name descname">reset_index</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.reset_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset the index of the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">per_chromosome</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the data held in this object to local storage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str.</em>) – Relative or full path to the target file to store the data or object in. Paths ending in .pickle will save a pickled version of the full object. Note that with low_ram enabled this will <strong>not</strong> store the data.</p></li>
+<li><p><strong>per_chromosome</strong> (<em>bool.</em>) – Whether to save seperate files for each chromosome.</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas to_csv() function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.sort_values">
+<code class="sig-name descname">sort_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">by</span></em>, <em class="sig-param"><span class="n">inplace</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.sort_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sorts values in the dataframe. Note: Sorting by chromosme (chr) will have no effect as data is already structured by chromosome.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>by</strong> – label of the column to sort values by</p></li>
+<li><p><strong>inplace</strong> (<em>bool.</em>) – Whether to return the sorted object or sort values within existing object. (Currently only inplace sorting is supported)</p></li>
+<li><p><strong>kwargs</strong> – Other keyword arguments to be passed to pandas sort_values function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Typpe by</dt>
+<dd class="field-even"><p>str.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pysumstats.MergedSumStats.tail">
+<code class="sig-name descname">tail</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">n_chromosomes</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.MergedSumStats.tail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints (n_chromosomes) dataframes with the last n rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int.</em>) – number of rows to show</p></li>
+<li><p><strong>n_chromosomes</strong> (<em>int.</em>) – number of chromosomes to show.</p></li>
+<li><p><strong>kwargs</strong> – keyword arguments to be passed to pandas tail function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">SumStats</a></li>
+<li><a class="reference internal" href="#mergedsumstats">MergedSumStats</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to pysumstats’s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../plotting/plotting.html"
+                        title="next chapter">Plotting</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/sumstats/sumstats.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../plotting/plotting.html" title="Plotting"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to pysumstats’s documentation!"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">pysumstats 0.2.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Matthijs D. van der Zee.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

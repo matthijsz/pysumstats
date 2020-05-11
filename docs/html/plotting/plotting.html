@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Plotting &#8212; pysumstats 0.2.1 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Utilities" href="../utils/utils.html" />
+    <link rel="prev" title="SumStats" href="../sumstats/sumstats.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../utils/utils.html" title="Utilities"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../sumstats/sumstats.html" title="SumStats"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">pysumstats 0.2.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="toctree-wrapper compound">
+</div>
+<div class="section" id="module-pysumstats.plot">
+<span id="plotting"></span><h1>Plotting<a class="headerlink" href="#module-pysumstats.plot" title="Permalink to this headline">¶</a></h1>
+<p>pysumstats.plot, a subpackage for generating plots from summary statistics data</p>
+<dl class="py function">
+<dt id="pysumstats.plot.manhattan">
+<code class="sig-prename descclassname">pysumstats.plot.</code><code class="sig-name descname">manhattan</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em>, <em class="sig-param"><span class="n">filename</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sigp</span><span class="o">=</span><span class="default_value">5e-08</span></em>, <em class="sig-param"><span class="n">sigcolor</span><span class="o">=</span><span class="default_value">'black'</span></em>, <em class="sig-param"><span class="n">sugp</span><span class="o">=</span><span class="default_value">1e-05</span></em>, <em class="sig-param"><span class="n">sugcolor</span><span class="o">=</span><span class="default_value">'black'</span></em>, <em class="sig-param"><span class="n">pointcolor</span><span class="o">=</span><span class="default_value">['midnightblue', 'goldenrod']</span></em>, <em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">highlight</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">highlightcolor</span><span class="o">=</span><span class="default_value">['orange']</span></em>, <em class="sig-param"><span class="n">title</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">rainbow</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.plot.manhattan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Manhattan plot.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataframe</strong> – pd.Dataframe containing the following columns: [‘rsid’, ‘chr’, ‘bp’, ‘p’], or <a class="reference internal" href="../sumstats/sumstats.html#pysumstats.SumStats" title="pysumstats.SumStats"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysumstats.SumStats</span></code></a></p></li>
+<li><p><strong>filename</strong> (<em>str.</em>) – Path to store the figure to (defaults to return fig, ax objects)</p></li>
+<li><p><strong>sigp</strong> (<em>float</em>) – Where to plot significant line(set to a negative number to remove)</p></li>
+<li><p><strong>sigcolor</strong> (<em>str</em>) – Color to use for significant line</p></li>
+<li><p><strong>sugp</strong> (<em>float</em>) – Where to plot significant line (set to a negative number to remove)</p></li>
+<li><p><strong>sugcolor</strong> (<em>str</em>) – Color to use for suggestive line</p></li>
+<li><p><strong>pointcolor</strong> (<em>list</em>) – Color, or list of colors to cycle through for plotting SNPs</p></li>
+<li><p><strong>size</strong> (<em>int</em><em> or </em><em>float</em>) – Relative figure size</p></li>
+<li><p><strong>highlight</strong> (<em>list.</em>) – list of SNPs to highlight</p></li>
+<li><p><strong>highlightcolor</strong> (<em>list.</em>) – Color, or list of colors to cycle through for highlighting SNPs</p></li>
+<li><p><strong>title</strong> (<em>list.</em>) – Main figure title</p></li>
+<li><p><strong>rainbow</strong> (<em>bool.</em>) – Enble rainbow colors</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None, or (fig, ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pysumstats.plot.qqplot">
+<code class="sig-prename descclassname">pysumstats.plot.</code><code class="sig-name descname">qqplot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pvector</span></em>, <em class="sig-param"><span class="n">filename</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">pointcolor</span><span class="o">=</span><span class="default_value">'black'</span></em>, <em class="sig-param"><span class="n">title</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">linecolor</span><span class="o">=</span><span class="default_value">'red'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pysumstats.plot.qqplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to generate a QQ-plot.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pvector</strong> – 1D-array of p-values</p></li>
+<li><p><strong>filename</strong> (<em>str.</em>) – Path to store the figure to (defaults to return fig, ax objects)</p></li>
+<li><p><strong>size</strong> (<em>int</em><em> or </em><em>float</em>) – Relative figure size (default=1)</p></li>
+<li><p><strong>pointcolor</strong> (<em>str.</em>) – Color to use for points</p></li>
+<li><p><strong>title</strong> (<em>str.</em>) – Main figure title.</p></li>
+<li><p><strong>linecolor</strong> (<em>str.</em>) – Color for line x=y</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None, or (fig, ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../sumstats/sumstats.html"
+                        title="previous chapter">SumStats</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../utils/utils.html"
+                        title="next chapter">Utilities</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/plotting/plotting.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../utils/utils.html" title="Utilities"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../sumstats/sumstats.html" title="SumStats"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">pysumstats 0.2.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Matthijs D. van der Zee.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

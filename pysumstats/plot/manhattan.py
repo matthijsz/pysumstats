@@ -5,6 +5,34 @@ import matplotlib.pyplot as plt
 def manhattan(dataframe, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, sugcolor='black',
               pointcolor=['midnightblue', 'goldenrod'], size=1, highlight=[],
               highlightcolor=['orange'], title=None, rainbow=False):
+    '''Create a Manhattan plot.
+
+    :param dataframe: pd.Dataframe containing the following columns: ['rsid', 'chr', 'bp', 'p'], or :class:`pysumstats.SumStats`
+    :param filename: Path to store the figure to (defaults to return fig, ax objects)
+    :type filename: str.
+    :param sigp: Where to plot significant line(set to a negative number to remove)
+    :type sigp: float
+    :param sigcolor: Color to use for significant line
+    :type sigcolor: str
+    :param sugp: Where to plot significant line (set to a negative number to remove)
+    :type sugp: float
+    :param sugcolor: Color to use for suggestive line
+    :type sugcolor: str
+    :param pointcolor: Color, or list of colors to cycle through for plotting SNPs
+    :type pointcolor: list
+    :param size: Relative figure size
+    :type size: int or float
+    :param highlight: list of SNPs to highlight
+    :type highlight: list.
+    :param highlightcolor: Color, or list of colors to cycle through for highlighting SNPs
+    :type highlightcolor: list.
+    :param title: Main figure title
+    :type title: list.
+    :param rainbow: Enble rainbow colors
+    :type rainbow: bool.
+    :return: None, or (fig, ax)
+
+    '''
     df = dataframe[['rsid', 'chr', 'bp', 'p']].copy()
     df.columns = map(str.lower, df.columns)
     if rainbow:

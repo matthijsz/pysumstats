@@ -14,10 +14,11 @@ import numpy as np
 
 
 class _Loc:
-    '''
-    A helper class to enable sumstats.loc[] similar to pandas dataframes.
+    """A helper class to enable sumstats.loc[] similar to pandas dataframes.
+
     :param master: object this _Loc class is attached to.
-    '''
+
+    """
     def __init__(self, master):
         self.master = master
 
@@ -33,11 +34,11 @@ class _Loc:
 
 
 class _H5SSConnection:
-    '''
-    A helper class to create a connection to a local HDF5 file which can be adressed like a dictionary.
-    Only used locally when low_ram is specified
+    """ A helper class to create a connection to a local HDF5 file which can be adressed like a dictionary. Only used locally when low_ram is specified
+
     :param filename: object this _Loc class is attached to.
-    '''
+
+    """
     def __init__(self, filename, tmpdir):
         if not os.path.isdir(tmpdir):
             os.makedirs(tmpdir)
@@ -55,36 +56,40 @@ class _H5SSConnection:
         value.to_hdf(self.path, key='chr' + str(key))
 
     def keys(self):
-        '''
+        """
+
         :return: range(1, 24); i.e. chromosome numbers
-        '''
+
+        """
         return range(1, 24)
 
     def values(self):
-        '''
+        """
+
         :return: yields data per chromosome
-        '''
+        """
         for i in self.keys():
             yield self[i]
 
     def items(self):
-        '''
+        """
+
         :return: tuple of chromosme number, and data.
-        '''
+        """
         for i in self.keys():
             yield i, self[i]
 
     def close(self):
-        '''
-        Closes connection and removes the file
-        '''
+        """Closes connection and removes the file
+
+        """
         os.remove(self.path)
 
 
 class _BaseSumStats:
-    '''
-    Base class of sumstats with functions accessible to both sumstats  and mergedsumstats.
-    '''
+    """ Base class of sumstats with functions accessible to both sumstats  and mergedsumstats.
+
+    """
     def __init__(self):
         self.loc = _Loc(self)
 
@@ -162,15 +167,18 @@ class _BaseSumStats:
                 raise IndexError('Length of input ({}) does not match data length ({}).'.format(len(value), len(self)))
 
     def copy(self):
-        '''
+        """
+
         :return: a deepcopy of the existing opject
-        '''
+        """
         return copy.deepcopy(self)
 
     def close(self):
-        '''
-        Close connection to and HDF5 file if low_ram is specified
-        '''
+        """Close connection to and HDF5 file if low_ram is specified
+
+        :return: None
+
+        """
         if not self.low_ram:
             print('No open connections')
             return None
@@ -179,16 +187,16 @@ class _BaseSumStats:
             self.data.close()
 
     def sort_values(self, by, inplace=True, **kwargs):
-        '''
-        Sorts values in the dataframe.
-        .. note:: Sorting by chromosme (chr) will have no effect as data is already structured by chromosome.
+        """Sorts values in the dataframe. Note: Sorting by chromosme (chr) will have no effect as data is already structured by chromosome.
+
         :param by: label of the column to sort values by
         :typpe by: str.
-        :param inplace: Wether to return the sorted object or sort values within existing object. (Currently only inplace sorting is supported)
+        :param inplace: Whether to return the sorted object or sort values within existing object. (Currently only inplace sorting is supported)
         :type inplace: bool.
         :param kwargs: Other keyword arguments to be passed to pandas sort_values function
         :return: None.
-        '''
+
+        """
         if not inplace:
             raise NotImplementedError()
         if by == 'chr':
@@ -200,23 +208,24 @@ class _BaseSumStats:
                 self.data[c] = data
 
     def groupby(self, *args, **kwargs):
-        '''
+        """Compatibility function to create pandas grouped object
+
         :param args: arguments to be passed to pandas groupby function
         :param kwargs: keyword arguments to be passed to pandas groupby function
         :return: a full grouped pandas dataframe object
-        '''
+        """
         return pd.concat([self.data[c] for c in self.data.keys()]).groupby(*args, **kwargs)
 
     def save(self, path, per_chromosome=False, **kwargs):
-        '''
-        :param path: Relative or full path to the target file to store the data or object in. Paths ending in .pickle
-        will save a pickled version of the full object. Note that with low_ram enabled this will **not** store the data.
+        """Save the data held in this object to local storage.
+
+        :param path: Relative or full path to the target file to store the data or object in. Paths ending in .pickle will save a pickled version of the full object. Note that with low_ram enabled this will **not** store the data.
         :type path: str.
         :param per_chromosome: Whether to save seperate files for each chromosome.
         :type per_chromosome: bool.
         :param kwargs: keyword arguments to be passed to pandas to_csv() function.
         :return: None
-        '''
+        """
         if ('index' in kwargs.keys()) or ('header' in kwargs.keys()):
             raise KeyError('\'index\' and \'header\' arguments not supported.')
         if not per_chromosome:
@@ -244,10 +253,11 @@ class _BaseSumStats:
                     data.to_csv(path.format(c), index=False, **kwargs)
 
     def reset_index(self):
-        '''
-        Reset the index of the data.
-        :return:
-        '''
+        """ Reset the index of the data.
+
+        :return: None
+
+        """
         mn = 0
         mx = 0
         for c in range(1, 24):
@@ -258,40 +268,43 @@ class _BaseSumStats:
             self.data[c] = data
 
     def head(self, n=10, n_chromosomes=1, **kwargs):
-        '''
-        Prints (n_chromosomes) dataframes with the first n rows.
+        """Prints (n_chromosomes) dataframes with the first n rows.
+
         :param n: number of rows to show
         :type n: int.
         :param n_chromosomes: number of chromosomes to show.
         :type n_chromosomes: int.
         :param kwargs: keyword arguments to be passed to pandas head function
         :return: None.
-        '''
+
+        """
         for n_chr in range(1, n_chromosomes + 1):
             print(self.data[n_chr].head(n, **kwargs))
 
     def tail(self, n=10, n_chromosomes=1, **kwargs):
-        '''
-        Prints (n_chromosomes) dataframes with the last n rows.
+        """Prints (n_chromosomes) dataframes with the last n rows.
+
         :param n: number of rows to show
         :type n: int.
         :param n_chromosomes: number of chromosomes to show.
         :type n_chromosomes: int.
         :param kwargs: keyword arguments to be passed to pandas tail function
         :return: None.
-        '''
+
+        """
         for n_chr in range(23, 23 - n_chromosomes):
             print(self.data[n_chr].tail(n, **kwargs))
 
     def _get_summary(self, sum_cols, per_chromosome):
-        '''
-        A function to generate summaries
+        """A function to generate summaries.
+
         :param sum_cols: columns to generate summaries from
         :type sum_cols: list.
         :param per_chromosome: Generate summaries per chromosome
         :type per_chromosome: bool.
         :return: pandas dataframe of summaries
-        '''
+
+        """
         summary = {}
         for c in sum_cols:
             summary[c] = self.data[1][c].describe()

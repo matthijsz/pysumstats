@@ -4,30 +4,31 @@ import os
 import numpy as np
 from scipy.stats import norm
 from .base import _BaseSumStats, _H5SSConnection
+from .plot import manhattan
+from .plot import qqplot
 
 pd.options.mode.chained_assignment = None
 
 
 class SumStats(_BaseSumStats):
-    '''
-    Class for summary statistics of a single GWAS.
-    :param path: Path to the file containing summary statistics. Should be a csv, or tab-delimited txt-file (.gz supported)
+    """Class for summary statistics of a single GWAS.
+
+    :param path: Path to the file containing summary statistics. Should be a csv, or tab-delimited txt-file (.gz supported).
     :type path: str.
     :param phenotype: Phenotype name
     :type phenotype: str.
     :param gwas_n: Optional N subjects in the GWAS, for N-based meta analysis (if there is no N column in the summary statistics)
     :type gwas_n: int
-    :param column_names: Optional dictionary of column names, if these are not automatically recognised. Keys should be:
-    ['rsid', 'chr', 'bp', 'ea', 'oa', 'maf', 'b', 'se', 'p', 'hwe', 'info', 'n', 'eaf', 'oaf']
+    :param column_names: Optional dictionary of column names, if these are not automatically recognised. Keys should be: ['rsid', 'chr', 'bp', 'ea', 'oa', 'maf', 'b', 'se', 'p', 'hwe', 'info', 'n', 'eaf', 'oaf']
     :type column_names: dict.
     :param data: Dataset for the new SumStats object, in general, don't specify this.
     :type data: dict.
-    :param low_ram: Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors.
-    Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
+    :param low_ram: Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
     :type low_ram: bool.
     :param tmpdir: Which directory to store the temporary files if low_ram is enabled.
     :type tmpdir: str.
-    '''
+
+    """
     def __init__(self, path, phenotype=None, gwas_n=None, column_names=None, data=None, low_ram=False,
                  tmpdir='sumstats_temporary'):
         super().__init__()
@@ -56,10 +57,11 @@ class SumStats(_BaseSumStats):
         self.columns = self.data[1].columns
 
     def _sync_colnames(self):
-        '''
-        Internal function to synchronize column names with the defaults
+        """Internal function to synchronize column names with the defaults.
+
         :return: None. Renamed data is stored inplace.
-        '''
+
+        """
         self.data.columns = [x.lower() for x in self.data.columns]
         if (len(self.data.columns)) != len(list(set(self.data.columns))):
             raise KeyError('Duplicate column names not allowed! (not case-sensitive)')
@@ -136,10 +138,11 @@ class SumStats(_BaseSumStats):
         self.variables = list(self.data.columns)
 
     def _split(self):
-        '''
-        Internal function to split the initial large dataset into chunks based on chromosome
+        """ Internal function to split the initial large dataset into chunks based on chromosome
+
         :return: None. Split data is stored inplace.
-        '''
+
+        """
         try:
             self.data['chr'] = self.data['chr'].astype(int)
         except ValueError:
@@ -159,13 +162,14 @@ class SumStats(_BaseSumStats):
         self.data = new_data
 
     def qc(self, maf=None, hwe=None, info=None):
-        '''
-        Basic GWAS quality control function.
+        """Basic GWAS quality control function.
+
         :param maf: Minor allele frequency cutoff, will drop SNPs where MAF < cutoff. Default: 0.1
         :param hwe: Hardy-Weinberg Equilibrium cutoff, will drop SNPs where HWE < cutoff, if specified and HWE column is present in the data.
         :param info: Imputation quality cutoff, will drop SNPs where Info < cutoff, if specified and Info column is present in the data.
         :return: None. Data is stored inplace
-        '''
+
+        """
         qc_vals = dict(maf=.01)
         qc_info = dict(org_len=0, maf=0, new_len=0)
         if maf is not None:
@@ -194,14 +198,15 @@ class SumStats(_BaseSumStats):
         self.qc_result = qc_info
 
     def merge(self, other, low_memory=False):
-        '''
-        Merge with other SumStats object(s).
+        """Merge with other SumStats object(s).
+
         :param other: Other sumstats object, or list of other SumStats objects.
         :type other: SumStats or list.
         :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
         :type low_memory: bool.
         :return: MergedSumstats object.
-        '''
+
+        """
         if isinstance(other, list):
             merged = self.merge(other[0], low_memory=low_memory)
             merged.merge(other[1:], inplace=True, low_memory=low_memory)
@@ -263,14 +268,15 @@ class SumStats(_BaseSumStats):
                                   tmpdir=self.tmpdir)
 
     def describe(self, columns=None, per_chromosome=False):
-        '''
-        Get a summary of the data.
+        """Get a summary of the data.
+
         :param columns: List of column names to print summary for (default: ['b', 'se', 'p'])
         :type columns: list.
         :param per_chromosome: Enable to return a list of summary dataframes per chromosome
         :type per_chromosome: bool.
-        :return: pd.Dataframe, or list of pd.Dataframes containing data summary
-        '''
+        :return: pd.Dataframe, or list
+
+        """
         if columns is None:
             columns = ['b', 'se', 'p']
         if (not isinstance(columns, list)) and isinstance(columns, str):
@@ -281,10 +287,19 @@ class SumStats(_BaseSumStats):
                 sum_cols.append(c)
         return self._get_summary(sum_cols, per_chromosome)
 
+    def manhattan(self, **kwargs):
+        """Generate a manhattan plot using this sumstats data
+
+        :param kwargs: keyworded arguments to be passed to :func:`pysumstats.plot.manhattan`
+        :return: None, or (fig, ax)
+
+        """
+        manhattan(self[['rsid', 'chr', 'bp', 'p']], **kwargs)
+
 
 class MergedSumStats(_BaseSumStats):
-    '''
-    Class containing merged summary statistics. In general you will not create a MergedSumStats object manually
+    """Class containing merged summary statistics. In general you will not create a MergedSumStats object manually.
+
     :param data: dataset containing merged summary statistics
     :type data: dict.
     :param phenotypes: list of phenotype names.
@@ -295,14 +310,14 @@ class MergedSumStats(_BaseSumStats):
     :type variables: list
     :param xy: x and y suffixes (to be used in _allign)
     :type xy: list
-    :param low_ram: Whether to use the low_ram option for this MergedSumStats object (passed down from SumStats). Use this only when running into MemoryErrors.
-    Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
+    :param low_ram: Whether to use the low_ram option for this MergedSumStats object (passed down from SumStats). Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
     :type low_ram: bool
     :param tmpdir: Which directory to store the temporary files if low_ram is enabled (passed down from SumStats).
     :type tmpdir: str.
     :param allign: Enable to auto-allign SNPs
     :type allign: bool.
-    '''
+
+    """
     def __init__(self, data, phenotypes, merge_info, variables, xy, low_ram=False, tmpdir='sumstats_temporary',
                  allign=True):
 
@@ -321,12 +336,13 @@ class MergedSumStats(_BaseSumStats):
         self.tmpdir = tmpdir
 
     def _allign(self, ynames=None):
-        '''
-        Function to allign SNPs to the first phenotype.
+        """Function to allign SNPs to the first phenotype.
+
         :param ynames: Optional argument of multiple phenotypes that should be alligned.
         :type ynames: list.
-        :return: None, alligned data is stored inplace.
-        '''
+        :return: None
+
+        """
         if self.suffixes[0] is None:
             suffix_x = ''
         else:
@@ -368,14 +384,15 @@ class MergedSumStats(_BaseSumStats):
         self.suffixes = [None, None]
 
     def meta_analyze(self, name='meta', method='ivw'):
-        '''
-        Meta analyze all GWAS summary statistics contained in this object.
+        """Meta analyze all GWAS summary statistics contained in this object.
+
         :param name: New phenotype name to use for the new SumStats object (default: 'meta')
         :type name: str.
         :param method: Meta-analysis method to use, should be one of ['ivw', 'samplesize'], default: 'ivw'
         :type method: str.
-        :return: SumStats object containing meta analysis results.
-        '''
+        :return: :class:`pysumstats.SumStats` object.
+
+        """
         if not self.low_ram:
             new_data = {}
         else:
@@ -410,15 +427,16 @@ class MergedSumStats(_BaseSumStats):
         return new_data
 
     def gwama(self, cov_matrix=None, h2_snp=None, name='gwama'):
-        '''
-        Multivariate meta analysis as described in Baselmans, et al. 2019.
+        """Multivariate meta analysis as described in Baselmans, et al. 2019.
+
         :param cov_matrix: Covariance matrix, defaults to generating a correlation matrix of Z-scores
-        :type cov_matrix: pd.Dataframe
+        :type cov_matrix: pd.Dataframe.
         :param h2_snp: Dict of SNP heritabilities per GWAS, to use as additional weights. Defaults to all 1's.
         :type h2_snp: dict.
         :param name: New phenotype name to use in the new SumStats object (default: 'gwama')
-        :return: SumStats object.
-        '''
+        :return: :class:`pysumstats.SumStats` object.
+
+        """
         if h2_snp is None:
             warnings.warn('h2-snp not specified, using ones instead. This will bias the estimates')
             h2_snp = {x: 1 for x in self.pheno_names}
@@ -496,16 +514,17 @@ class MergedSumStats(_BaseSumStats):
         return new_data
 
     def merge(self, other, inplace=False, low_memory=False):
-        '''
-        Merge with other SumStats or MergedSumstats object(s)
-        :param other: SumStats, MergedSumstats object, or a list of SumStats, MergedSumstats objects
-        :type other: SumStats, MergedSumStats, or list.
+        """ Merge with other SumStats or MergedSumstats object(s).
+
+        :param other: :class:`pysumstats.SumStats`, or :class:`pysumstats.MergedSumStats` object, or a list of SumStats, MergedSumstats objects
+        :type other: :class:`pysumstats.SumStats`, :class:`pysumstats.MergedSumStats`, or list.
         :param inplace: Enable to store the new data in the current MergedSumStats object. (currently not supported when low_ram is enabled)
         :type inplace: bool.
         :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
         :type low_memory: bool.
-        :return: MergedSumStats object.
-        '''
+        :return: :class:`pysumstats.MergedSumStats` object.
+
+        """
         if self.low_ram and inplace:
             return NotImplementedError('Merging inplace when low_ram is enabled is currently not supported.')
         if isinstance(other, list):
@@ -610,14 +629,15 @@ class MergedSumStats(_BaseSumStats):
                     return newmergedss
 
     def describe(self, columns=None, per_chromosome=False):
-        '''
-        Get a summary of the data.
+        """ Get a summary of the data.
+
         :param columns: List of column names to print summary for (default: ['b', 'se', 'p'])
         :type columns: list.
         :param per_chromosome: Enable to return a list of summary dataframes per chromosome
         :type per_chromosome: bool.
         :return: pd.Dataframe, or list of pd.Dataframes containing data summary
-        '''
+
+        """
         if columns is None:
             columns = ['b', 'se', 'p']
         if (not isinstance(columns, list)) and isinstance(columns, str):
@@ -633,8 +653,8 @@ class MergedSumStats(_BaseSumStats):
         return self._get_summary(sum_cols, per_chromosome)
 
     def prep_for_mr(self, exposure, outcome, filename=None, p_cutoff=None, bidirectional=False, **kwargs):
-        '''
-        Save a pre-formatted file to use with the MendelianRandomization package in R.
+        """Save a pre-formatted file to use with the MendelianRandomization package in R.
+
         :param exposure: phenotype name to use as exposure.
         :type exposure: str.
         :param outcome: phenotype name to use as outcome.
@@ -647,7 +667,8 @@ class MergedSumStats(_BaseSumStats):
         :type bidirectional: bool.
         :param kwargs: Additional keyword arguments to be passed to pandas to_csv function.
         :return: None, resulting data is stored on local storage.
-        '''
+
+        """
         if bidirectional and (not isinstance(filename, list)):
             raise ValueError(
                 'If bidirectional, filename should be a list of filenames: (exp-outcome)-name and (outcome-exp) name.')

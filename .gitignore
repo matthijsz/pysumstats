@@ -8,3 +8,5 @@
 Makefile
 make.bat
 /source/
+docs/html/_sources/
+docs/.buildinfo

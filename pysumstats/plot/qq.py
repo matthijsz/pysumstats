@@ -3,6 +3,22 @@ import matplotlib.pyplot as plt
 
 
 def qqplot(pvector, filename=None, size=1, pointcolor='black', title=None, linecolor='red'):
+    """Function to generate a QQ-plot.
+
+    :param pvector: 1D-array of p-values
+    :param filename: Path to store the figure to (defaults to return fig, ax objects)
+    :type filename: str.
+    :param size: Relative figure size (default=1)
+    :type size: int or float
+    :param pointcolor: Color to use for points
+    :type pointcolor: str.
+    :param title: Main figure title.
+    :type title: str.
+    :param linecolor: Color for line x=y
+    :type linecolor: str.
+    :return: None, or (fig, ax)
+
+    """
     pvector = pvector[~np.isnan(pvector)]
     pvector = pvector[~((pvector >= 1) | (pvector <= 0))]
     pvector.sort()
