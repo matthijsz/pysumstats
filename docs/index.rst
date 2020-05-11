@@ -8,7 +8,6 @@ Welcome to pysumstats's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
    sumstats/sumstats
    plotting/plotting
