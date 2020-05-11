@@ -303,7 +303,7 @@ class SumStats(_BaseSumStats):
         :return: None, or (fig, ax)
 
         """
-        qqplot(self[['rsid', 'chr', 'bp', 'p']], **kwargs)
+        qqplot(self['p'].values, **kwargs)
 
 class MergedSumStats(_BaseSumStats):
     """Class containing merged summary statistics. In general you will not create a MergedSumStats object manually.
