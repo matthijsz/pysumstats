@@ -1,8 +1,17 @@
 # Patch notes
 
+##### 12-05-2020 (v0.3)
+ - Added `fig` and `ax` arguments to `pysumstats.plot.qqplot` and `pysumstats.plot.manhattan` to enable plotting to existing figure and axis.
+ - Added `pysumstats.plot.pzplot`, to visually compare Z-values from `B/SE` to Z-values calculated from the P-value.
+ - Added `pysumstats.plot.afplot`, to plot allele frequency differences between summary statistics.
+ - Added `pysumstats.plot.zzplot`, to plot differences in Z-values between summary statistics.
+ - Added `qqplot`, `manhattan`, `pzplot`, `afplot`, `zzplot` functions to MergedSumStats object.
+ - Added `pzplot` function to SumStats object.
+ - Added `plot_all` functions to SumStats and MergedSumStats objects to automatically generate all possible plots for the object.
+
 ##### 11-05-2020 (v0.2.3)
 
- - Added `return` statement to MergedSumstats.merge() when `inplace=False` and merging with other MergedSumstats.
+ - Added `return` statement to MergedSumStats.merge() when `inplace=False` and merging with other MergedSumstats.
  - Added docstrings to base, mergedsumstats, sumstats and utils.
  - Added [docs](https://pysumstats.readthedocs.io/en/latest/)
  - Fixed import errors and added `manhattan` and `qq` function to `SumStats` class
@@ -22,7 +31,16 @@ A python package for working with GWAS summary statistics data in Python. <br/>
 This package is designed to make it easy to read summary statistics, perform QC, merge summary statistics and perform meta-analysis.<br/>
 Meta-analysis can be performed with `.meta()` with inverse-variance weighted or samplesize-weighted methods.<br/>
 GWAMA as described in [Baselmans, et al. (2019)](https://www.nature.com/articles/s41588-018-0320-8) can be performed using the `.gwama()` function in merged summary statistics. <br/>
-Note merging with low_memory enabled is still highly experimental.
+The plotting package uses matplotlib.pyplot for generating figures, so the functions are generally compatible with matplotlib.pyplot colors, and Figure and Axis objects. <br/>
+Warning: merging with low_memory enabled is still highly experimental. <br/>
+
+# Reference
+
+Using the pysumstats package for a publication, or something similar? That is **awesome**! <br/>
+There is no publication attached to this package, 
+and I am not going to force anyone to reference me or make me a co-author or whatever, I want this to remain easily accessible. 
+But I would greatly appreciate it if you add a link to this github, or a reference to it in the acknowledgements or something like that. <br/>
+If you have any questions, want to help add methods or want to let me know you are planning a publication with this, you can get in touch via the [pypi website of this project](https://pypi.org/project/pysumstats/).
 
 # Installation
 
@@ -95,8 +113,8 @@ gwama = exc.gwama(cov_matrix=cov_z, h2_snp={'GWASsummary1': .01, 'GWASsummary2':
 
 ###### QQ and Manhattan plots of the result
 ```
-sumstats.plot.manhattan(gwama, filename='meta_manhattan.png')
-sumstats.plot.qqplot(gwama['p'].values, filename='meta_qq.png')
+gwama.manhattan(filename='meta_manhattan.png')
+gwama.qqplot(filename='meta_qq.png')
 ``` 
 
 ###### Save the result as csv

@@ -4,8 +4,8 @@ import os
 import numpy as np
 from scipy.stats import norm
 from .base import _BaseSumStats, _H5SSConnection
-from .plot import manhattan
-from .plot import qqplot
+from .utils import _MultiWindowPlot
+from .plot import (manhattan, qqplot, afplot, zzplot, pzplot)
 
 pd.options.mode.chained_assignment = None
 
@@ -14,41 +14,43 @@ class SumStats(_BaseSumStats):
     """Class for summary statistics of a single GWAS.
 
     :param path: Path to the file containing summary statistics. Should be a csv, or tab-delimited txt-file (.gz supported).
-    :type path: str.
+    :type path: str
     :param phenotype: Phenotype name
-    :type phenotype: str.
+    :type phenotype: str
     :param gwas_n: Optional N subjects in the GWAS, for N-based meta analysis (if there is no N column in the summary statistics)
     :type gwas_n: int
     :param column_names: Optional dictionary of column names, if these are not automatically recognised. Keys should be: ['rsid', 'chr', 'bp', 'ea', 'oa', 'maf', 'b', 'se', 'p', 'hwe', 'info', 'n', 'eaf', 'oaf']
-    :type column_names: dict.
+    :type column_names: dict
     :param data: Dataset for the new SumStats object, in general, don't specify this.
-    :type data: dict.
+    :type data: dict
     :param low_ram: Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
-    :type low_ram: bool.
+    :type low_ram: bool
     :param tmpdir: Which directory to store the temporary files if low_ram is enabled.
-    :type tmpdir: str.
+    :type tmpdir: str
 
     """
+
     def __init__(self, path, phenotype=None, gwas_n=None, column_names=None, data=None, low_ram=False,
                  tmpdir='sumstats_temporary'):
         super().__init__()
         self.low_ram = low_ram
         self.tmpdir = tmpdir
+        self.plot_funcs = {'manhattan': self.manhattan, 'qqplot': self.qqplot, 'pzplot': self.pzplot}
         if phenotype is None:
             self.phenotype_name = path.split('/')[-1].split('.')[0]
         else:
             self.phenotype_name = phenotype
         self.column_names = column_names
         if path is not None:
-            if path.endswith('.txt') or path.endswith('.txt.gz'):
+            if path.endswith('.txt') or path.endswith('.txt.gz') or path.endswith('.tsv') or path.endswith('.tsv.gz'):
                 self.data = pd.read_csv(path, sep='\t')
             elif path.endswith('.csv') or path.endswith('.csv.gz'):
                 self.data = pd.read_csv(path)
             else:
-                raise ImportError('Only .txt(.gz) and .csv(.gz) files are supported.')
+                raise ImportError('Only .txt(.gz), .tsv(.gz), and .csv(.gz) files are supported.')
             self.gwas_n = gwas_n
             self.qc_result = {}
-            self._sync_colnames()
+            self._sync_columns()
             self._split()
         else:
             self.phenotype_name = phenotype
@@ -56,10 +58,10 @@ class SumStats(_BaseSumStats):
             self.reset_index()
         self.columns = self.data[1].columns
 
-    def _sync_colnames(self):
-        """Internal function to synchronize column names with the defaults.
+    def _sync_columns(self):
+        """Internal function to synchronize column names and types with the defaults.
 
-        :return: None. Renamed data is stored inplace.
+        :return: None
 
         """
         self.data.columns = [x.lower() for x in self.data.columns]
@@ -84,6 +86,9 @@ class SumStats(_BaseSumStats):
             'eaf': ['a1freq', 'a1frq', 'a1f', 'eaf', 'freq1'],
             'oaf': ['a2freq', 'a2frq', 'a2f', 'oaf', 'freq2'],
         }
+        column_types = {'rsid': str, 'chr': np.uint8, 'bp': np.uint32, 'ea': str, 'oa': str, 'maf': np.float32,
+                        'b': np.float64, 'se': np.float64, 'p': np.float64, 'hwe': np.float32, 'info': np.float32,
+                        'n': np.uint32, 'eaf': np.float32, 'oaf': np.float32}
         if self.column_names is not None:
             for k, v in self.column_names:
                 if (k not in column_name_variants) and (k not in column_name_variants2):
@@ -136,11 +141,14 @@ class SumStats(_BaseSumStats):
         self.data['ea'] = self.data['ea'].str.upper()
         self.data['oa'] = self.data['oa'].str.upper()
         self.variables = list(self.data.columns)
+        for column, targettype in column_types.items():
+            if column in self.data.columns:
+                self.data[column].astype(targettype, copy=False)
 
     def _split(self):
         """ Internal function to split the initial large dataset into chunks based on chromosome
 
-        :return: None. Split data is stored inplace.
+        :return: None
 
         """
         try:
@@ -150,7 +158,7 @@ class SumStats(_BaseSumStats):
             try:
                 self.data['chr'] = self.data['chr'].astype(int)
             except ValueError:
-                raise ValueError('Could not convert chromosome columnt to integer')
+                raise ValueError('Could not convert chromosome column to integer')
         if not self.low_ram:
             new_data = {}
         else:
@@ -167,7 +175,7 @@ class SumStats(_BaseSumStats):
         :param maf: Minor allele frequency cutoff, will drop SNPs where MAF < cutoff. Default: 0.1
         :param hwe: Hardy-Weinberg Equilibrium cutoff, will drop SNPs where HWE < cutoff, if specified and HWE column is present in the data.
         :param info: Imputation quality cutoff, will drop SNPs where Info < cutoff, if specified and Info column is present in the data.
-        :return: None. Data is stored inplace
+        :return: None
 
         """
         qc_vals = dict(maf=.01)
@@ -204,7 +212,7 @@ class SumStats(_BaseSumStats):
         :type other: SumStats or list.
         :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
         :type low_memory: bool.
-        :return: MergedSumstats object.
+        :return: :class:`pysumstats.plot.MergedSumstats` object.
 
         """
         if isinstance(other, list):
@@ -305,15 +313,25 @@ class SumStats(_BaseSumStats):
         """
         qqplot(self['p'].values, **kwargs)
 
+    def pzplot(self, **kwargs):
+        """Generate a PZ-plot using this sumstats data
+
+        :param kwargs: keyworded arguments to be passed to :func:`pysumstats.plot.pzplot`
+        :return: None, or (fig, ax)
+
+        """
+        pzplot(self[['b', 'se', 'p']], **kwargs)
+
+
 class MergedSumStats(_BaseSumStats):
     """Class containing merged summary statistics. In general you will not create a MergedSumStats object manually.
 
     :param data: dataset containing merged summary statistics
-    :type data: dict.
+    :type data: dict
     :param phenotypes: list of phenotype names.
-    :type phenotypes: list.
+    :type phenotypes: list
     :param merge_info: Dict with information on the merge
-    :type merge_info: dict.
+    :type merge_info: dict
     :param variables: list of variables contained in the data.
     :type variables: list
     :param xy: x and y suffixes (to be used in _allign)
@@ -321,14 +339,14 @@ class MergedSumStats(_BaseSumStats):
     :param low_ram: Whether to use the low_ram option for this MergedSumStats object (passed down from SumStats). Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
     :type low_ram: bool
     :param tmpdir: Which directory to store the temporary files if low_ram is enabled (passed down from SumStats).
-    :type tmpdir: str.
+    :type tmpdir: str
     :param allign: Enable to auto-allign SNPs
-    :type allign: bool.
+    :type allign: bool
 
     """
+
     def __init__(self, data, phenotypes, merge_info, variables, xy, low_ram=False, tmpdir='sumstats_temporary',
                  allign=True):
-
         super().__init__()
         self.pheno_names = phenotypes
         self.data = data
@@ -342,12 +360,14 @@ class MergedSumStats(_BaseSumStats):
         self.phenotype_name = None
         self.low_ram = low_ram
         self.tmpdir = tmpdir
+        self.plot_funcs = {'manhattan': self.manhattan, 'qqplot': self.qqplot, 'pzplot': self.pzplot,
+                           'afplot': self.afplot, 'zzplot': self.zzplot}
 
     def _allign(self, ynames=None):
         """Function to allign SNPs to the first phenotype.
 
         :param ynames: Optional argument of multiple phenotypes that should be alligned.
-        :type ynames: list.
+        :type ynames: list
         :return: None
 
         """
@@ -395,9 +415,9 @@ class MergedSumStats(_BaseSumStats):
         """Meta analyze all GWAS summary statistics contained in this object.
 
         :param name: New phenotype name to use for the new SumStats object (default: 'meta')
-        :type name: str.
+        :type name: str
         :param method: Meta-analysis method to use, should be one of ['ivw', 'samplesize'], default: 'ivw'
-        :type method: str.
+        :type method: str
         :return: :class:`pysumstats.SumStats` object.
 
         """
@@ -438,11 +458,11 @@ class MergedSumStats(_BaseSumStats):
         """Multivariate meta analysis as described in Baselmans, et al. 2019.
 
         :param cov_matrix: Covariance matrix, defaults to generating a correlation matrix of Z-scores
-        :type cov_matrix: pd.Dataframe.
+        :type cov_matrix: pd.Dataframe
         :param h2_snp: Dict of SNP heritabilities per GWAS, to use as additional weights. Defaults to all 1's.
-        :type h2_snp: dict.
+        :type h2_snp: dict
         :param name: New phenotype name to use in the new SumStats object (default: 'gwama')
-        :return: :class:`pysumstats.SumStats` object.
+        :return: :class:`pysumstats.SumStats` object
 
         """
         if h2_snp is None:
@@ -527,10 +547,10 @@ class MergedSumStats(_BaseSumStats):
         :param other: :class:`pysumstats.SumStats`, or :class:`pysumstats.MergedSumStats` object, or a list of SumStats, MergedSumstats objects
         :type other: :class:`pysumstats.SumStats`, :class:`pysumstats.MergedSumStats`, or list.
         :param inplace: Enable to store the new data in the current MergedSumStats object. (currently not supported when low_ram is enabled)
-        :type inplace: bool.
+        :type inplace: bool
         :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
-        :type low_memory: bool.
-        :return: :class:`pysumstats.MergedSumStats` object.
+        :type low_memory: bool
+        :return: None, or :class:`pysumstats.MergedSumStats` object.
 
         """
         if self.low_ram and inplace:
@@ -640,10 +660,10 @@ class MergedSumStats(_BaseSumStats):
         """ Get a summary of the data.
 
         :param columns: List of column names to print summary for (default: ['b', 'se', 'p'])
-        :type columns: list.
+        :type columns: list
         :param per_chromosome: Enable to return a list of summary dataframes per chromosome
-        :type per_chromosome: bool.
-        :return: pd.Dataframe, or list of pd.Dataframes containing data summary
+        :type per_chromosome: bool
+        :return: pd.Dataframe, or list of pd.Dataframes
 
         """
         if columns is None:
@@ -664,17 +684,17 @@ class MergedSumStats(_BaseSumStats):
         """Save a pre-formatted file to use with the MendelianRandomization package in R.
 
         :param exposure: phenotype name to use as exposure.
-        :type exposure: str.
+        :type exposure: str
         :param outcome: phenotype name to use as outcome.
-        :type outcome: str.
-        :param filename: Path to where the resulting file(s) should be stored, or list of paths is bidirectional=True
-        :type filename: str or list.
+        :type outcome: str
+        :param filename: Path to where the resulting file(s) should be stored, or list of paths if bidirectional=True
+        :type filename: str, list or None
         :param p_cutoff: Optional p-value cut-off to apply. Will include SNPs where P > p_cutoff
-        :type p_cutoff: float.
+        :type p_cutoff: float
         :param bidirectional: Enable to store two files (exposure=exposure, outcome=outcome), and (exposure=outcome, outcome=exposure)
-        :type bidirectional: bool.
+        :type bidirectional: bool
         :param kwargs: Additional keyword arguments to be passed to pandas to_csv function.
-        :return: None, resulting data is stored on local storage.
+        :return: None
 
         """
         if bidirectional and (not isinstance(filename, list)):
@@ -711,3 +731,177 @@ class MergedSumStats(_BaseSumStats):
             else:
                 self.prep_for_mr(exposure=outcome, outcome=exposure, filename=filename[1], p_cutoff=p_cutoff,
                                  bidirectional=False, **kwargs)
+
+    def manhattan(self, filename=None, phenotypes=None, nrows=None, ncols=None, figsize=None, dpi=300, **kwargs):
+        """Generates manhattan plots for each phenotype (or specified phenotypes) in merged GWAS data.
+
+        :param filename: Target file to save the resulting figure to (if no name is specified, fig and axes are returned)
+        :type filename: str
+        :param phenotypes: List of phenotype names to plot manhattans for (defaults to plotting all phenotypes)
+        :type phenotypes: list
+        :param nrows: Specify number of rows in the figure ( defaults to int(ceil(len(phenotypes)/ncols)) )
+        :type nrows: int
+        :param ncols: Specify number of columns in the figure ( defaults to int(log2(len(phenotypes)/2)) )
+        :type ncols: int
+        :param figsize: Specify width and height of figure in inches ( defaults to (ncols*8, nrows*4) )
+        :type figsize: (int, int)
+        :param dpi: DPI setting to use when saving the figure.
+        :type dpi: int
+        :param kwargs: Other keyword arguments to be passed to :func:`pysumstats.plot.manhattan`
+        :return: (fig, axes) or None.
+        """
+        if phenotypes is None:
+            phenotypes = self.pheno_names
+        plotwindow = _MultiWindowPlot(len(phenotypes), nrows=nrows, ncols=ncols, figsize=figsize, shape='rect')
+        dat = self[['rsid', 'chr', 'bp']]
+        for phenotype in phenotypes:
+            fig, ax = plotwindow.get_next_ax()
+            dat['p'] = self['p_{}'.format(phenotype)]
+            if 'title' not in kwargs.keys():
+                manhattan(dat, fig=fig, ax=ax, title=phenotype, **kwargs)
+            else:
+                manhattan(dat, fig=fig, ax=ax, **kwargs)
+        return plotwindow.finish(filename=filename, dpi=dpi)
+
+    def qqplot(self, filename=None, phenotypes=None, nrows=None, ncols=None, figsize=None, dpi=300, **kwargs):
+        """Generates QQ-plots for each phenotype (or specified phenotypes) in merged GWAS data.
+
+        :param filename: Target file to save the resulting figure to (if no name is specified, fig and axes are returned)
+        :type filename: str
+        :param phenotypes: List of phenotype names to plot QQ-plots for (defaults to plotting all phenotypes)
+        :type phenotypes: list
+        :param nrows: Specify number of rows in the figure ( defaults to int(sqrt(len(phenotypes))) )
+        :type nrows: int
+        :param ncols: Specify number of columns in the figure ( defaults to int(ceil(len(phenotypes)/nrows)) )
+        :type ncols: int
+        :param figsize: Specify width and height of figure in inches ( defaults to (ncols*5, nrows*5) )
+        :type figsize: (int, int)
+        :param dpi: DPI setting to use when saving the figure.
+        :type dpi: int
+        :param kwargs: Other keyword arguments to be passed to :func:`pysumstats.plot.qqplot`
+        :return: (fig, axes) or None.
+
+        """
+        if phenotypes is None:
+            phenotypes = self.pheno_names
+        plotwindow = _MultiWindowPlot(len(phenotypes), nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
+        for phenotype in phenotypes:
+            fig, ax = plotwindow.get_next_ax()
+            if 'title' not in kwargs.keys():
+                qqplot(self['p_{}'.format(phenotype)].values, fig=fig, ax=ax, title=phenotype, **kwargs)
+            else:
+                qqplot(self['p_{}'.format(phenotype)].values, fig=fig, ax=ax, **kwargs)
+        return plotwindow.finish(filename=filename, dpi=dpi)
+
+    def pzplot(self, filename=None, phenotypes=None, nrows=None, ncols=None, figsize=None, dpi=300, **kwargs):
+        """Generates PZ-plots for each phenotype (or specified phenotypes) in merged GWAS data.
+
+        :param filename: Target file to save the resulting figure to (if no name is specified, fig and axes are returned)
+        :type filename: str
+        :param phenotypes: List of phenotype names to plot PZ-plots for (defaults to plotting all phenotypes)
+        :type phenotypes: list
+        :param nrows: Specify number of rows in the figure ( defaults to int(sqrt(len(phenotypes))) )
+        :type nrows: int
+        :param ncols: Specify number of columns in the figure ( defaults to int(ceil(len(phenotypes)/nrows)) )
+        :type ncols: int
+        :param figsize: Specify width and height of figure in inches ( defaults to (ncols*5, nrows*5) )
+        :type figsize: (int, int)
+        :param dpi: DPI setting to use when saving the figure.
+        :type dpi: int
+        :param kwargs: Other keyword arguments to be passed to :func:`pysumstats.plot.pzplot`
+        :return: (fig, axes) or None.
+
+        """
+        if phenotypes is None:
+            phenotypes = self.pheno_names
+        plotwindow = _MultiWindowPlot(len(phenotypes), nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
+        for phenotype in phenotypes:
+            dat = self[['{}_{}'.format(v, phenotype) for v in ['b', 'se', 'p']]].copy()
+            dat.rename(columns={'{}_{}'.format(v, phenotype): v for v in ['b', 'se', 'p']}, inplace=True)
+            fig, ax = plotwindow.get_next_ax()
+            if 'title' not in kwargs.keys():
+                pzplot(dat, fig=fig, ax=ax, title='PZ_{}'.format(phenotype), **kwargs)
+            else:
+                pzplot(dat, fig=fig, ax=ax, **kwargs)
+        return plotwindow.finish(filename=filename, dpi=dpi)
+
+    def afplot(self, ref_phenotypes=None, other_phenotypes=None, filename=None, nrows=None, ncols=None, figsize=None,
+               dpi=300, **kwargs):
+        """Generates AF comparison plots for merged GWAS data.
+
+        :param ref_phenotypes: List of phenotypes to use as reference (defaults to all phenotypes)
+        :type ref_phenotypes: list
+        :param other_phenotypes: List of phenotypes to compare reference to (defaults to all phenotypes, overlapping plots will be dropped)
+        :type other_phenotypes: list
+        :param filename: Target file to save the resulting figure to (if no name is specified, fig and axes are returned)
+        :type filename: str
+        :param nrows: Specify number of rows in the figure ( defaults to int(ceil(n_plots/ncols)) )
+        :type nrows: int
+        :param ncols: Specify number of columns in the figure ( defaults to int(sqrt(n_plots)))
+        :type ncols: int
+        :param figsize: Specify width and height of figure in inches ( defaults to (ncols*5, nrows*5) )
+        :type figsize: (int, int)
+        :param dpi: DPI setting to use when saving the figure.
+        :type dpi: int
+        :param kwargs: Other keyword arguments to be passed to :func:`pysumstats.plot.manhattan`
+        :return: (fig, axes) or None.
+
+        """
+        if ref_phenotypes is None:
+            ref_phenotypes = self.pheno_names
+        if other_phenotypes is None:
+            other_phenotypes = self.pheno_names
+        n_plots = len(ref_phenotypes) * len(other_phenotypes)
+        plotwindow = _MultiWindowPlot(n_plots, nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
+        for p1 in ref_phenotypes:
+            eafp1 = self['eaf_{}'.format(p1)].values
+            for p2 in other_phenotypes:
+                fig, ax = plotwindow.get_next_ax()
+                if p1 != p2:
+                    afplot(eafp1, self['eaf_{}'.format(p2)].values,
+                           refname=r'$EAF_{}$'.format('{' + p1.replace('_', r'\_') + '}'),
+                           othername=r'$EAF_{}$'.format('{' + p2.replace('_', r'\_') + '}'), fig=fig, ax=ax,
+                           **kwargs)
+        return plotwindow.finish(filename=filename, dpi=dpi)
+
+    def zzplot(self, ref_phenotypes=None, other_phenotypes=None, filename=None, nrows=None, ncols=None, figsize=None,
+               dpi=300, **kwargs):
+        """Generates ZZ comparison plots for merged GWAS data.
+
+        :param ref_phenotypes: List of phenotypes to use as reference (defaults to all phenotypes)
+        :type ref_phenotypes: list
+        :param other_phenotypes: List of phenotypes to compare reference to (defaults to all phenotypes, overlapping plots will be dropped)
+        :type other_phenotypes: list
+        :param filename: Target file to save the resulting figure to (if no name is specified, fig and axes are returned)
+        :type filename: str
+        :param nrows: Specify number of rows in the figure ( defaults to int(ceil(n_plots/ncols)) )
+        :type nrows: int
+        :param ncols: Specify number of columns in the figure ( defaults to int(sqrt(n_plots)))
+        :type ncols: int
+        :param figsize: Specify width and height of figure in inches ( defaults to (ncols*5, nrows*5) )
+        :type figsize: (int, int)
+        :param dpi: DPI setting to use when saving the figure.
+        :type dpi: int
+        :param kwargs: Other keyword arguments to be passed to :func:`pysumstats.plot.zzplot`
+        :return: (fig, axes) or None.
+
+        """
+        if ref_phenotypes is None:
+            ref_phenotypes = self.pheno_names
+        if other_phenotypes is None:
+            other_phenotypes = self.pheno_names
+        n_plots = len(ref_phenotypes) * len(other_phenotypes)
+        plotwindow = _MultiWindowPlot(n_plots, nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
+        for p1 in ref_phenotypes:
+            zz1 = self[['b_{}'.format(p1), 'se_{}'.format(p1)]].copy()
+            zz1.rename(columns={'b_{}'.format(p1): 'b', 'se_{}'.format(p1): 'se'}, inplace=True)
+            for p2 in other_phenotypes:
+                fig, ax = plotwindow.get_next_ax()
+                if p1 != p2:
+                    zz2 = self[['b_{}'.format(p2), 'se_{}'.format(p2)]].copy()
+                    zz2.rename(columns={'b_{}'.format(p2): 'b', 'se_{}'.format(p2): 'se'}, inplace=True)
+                    zzplot(zz1, zz2, xname=r'$Z_{}$'.format('{' + p1.replace('_', r'\_') + '}'),
+                           yname='r$Z_{}$'.format('{' + p2.replace('_', r'\_') + '}'),
+                           fig=fig,
+                           ax=ax, **kwargs)
+        return plotwindow.finish(filename=filename, dpi=dpi)

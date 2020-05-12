@@ -1,9 +1,16 @@
 from setuptools import setup
+# read the contents of your README file
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+
+with open(path.join(this_directory, 'README.md'), 'r', encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(name='pysumstats',
-      version='0.2.3',
+      version='0.3',
       description='Package for working with GWAS summary statistics',
-      long_description='Python package for reading, combining, meta-analyzing, and saving GWAS summary statistics data.',
+      long_description=long_description,
+      long_description_content_type='text/markdown',
       keywords='gwas summary statistics genetics',
       url='https://github.com/matthijsz/pysumstats',
       author='Matthijs D. van der Zee',
@@ -14,7 +21,8 @@ setup(name='pysumstats',
           'pandas',
           'tables',
           'numpy',
-          'scipy'
+          'scipy',
+          'matplotlib',
       ],
       classifiers=[
         'Development Status :: 4 - Beta',

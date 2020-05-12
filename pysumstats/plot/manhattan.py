@@ -2,12 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def manhattan(dataframe, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, sugcolor='black',
-              pointcolor=['midnightblue', 'goldenrod'], size=1, highlight=[],
+def manhattan(dataframe, fig=None, ax=None, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, sugcolor='black',
+              pointcolor=['midnightblue', 'goldenrod'], figsize=(12, 6), highlight=[],
               highlightcolor=['orange'], title=None, rainbow=False):
-    '''Create a Manhattan plot.
+    """Create a Manhattan plot.
 
     :param dataframe: pd.Dataframe containing the following columns: ['rsid', 'chr', 'bp', 'p'], or :class:`pysumstats.SumStats`
+    :param fig: matplotlib.pyplot figure object to plot to (if not specified a new figure will be created)
+    :param ax: matplotlib.pyplot axis to plot to (if not specified a new figure will be created)
     :param filename: Path to store the figure to (defaults to return fig, ax objects)
     :type filename: str.
     :param sigp: Where to plot significant line(set to a negative number to remove)
@@ -20,8 +22,8 @@ def manhattan(dataframe, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, 
     :type sugcolor: str
     :param pointcolor: Color, or list of colors to cycle through for plotting SNPs
     :type pointcolor: list
-    :param size: Relative figure size
-    :type size: int or float
+    :param figsize: Figure size
+    :type figsize: (int, int)
     :param highlight: list of SNPs to highlight
     :type highlight: list.
     :param highlightcolor: Color, or list of colors to cycle through for highlighting SNPs
@@ -32,7 +34,7 @@ def manhattan(dataframe, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, 
     :type rainbow: bool.
     :return: None, or (fig, ax)
 
-    '''
+    """
     df = dataframe[['rsid', 'chr', 'bp', 'p']].copy()
     df.columns = map(str.lower, df.columns)
     if rainbow:
@@ -54,7 +56,8 @@ def manhattan(dataframe, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, 
         dfhighlight = df[df['rsid'].isin(highlight)]
         dfhighlight_grouped = dfhighlight.groupby('chr')
     df_grouped = df.groupby('chr')
-    fig, ax = plt.subplots(1, 1, figsize=(12 * float(size), 6 * float(size)), dpi=300*(float(size)**2), facecolor='w')
+    if (fig is None) and (ax is None):
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=300*(float(figsize[0]/12)**2), facecolor='w')
     colors = pointcolor
     x_labels = []
     x_labels_pos = []
@@ -66,7 +69,7 @@ def manhattan(dataframe, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, 
     if len(highlight) > 0:
         for num, (name, group) in enumerate(dfhighlight_grouped):
             group.plot(kind='scatter', x='ind', y='logp', color=highlightcolor[num % len(highlightcolor)],
-                       edgecolor=highlightcolor[num % len(highlightcolor)], ax=ax, marker='^', s=45 * size)
+                       edgecolor=highlightcolor[num % len(highlightcolor)], ax=ax, marker='^', s=45)
     if sigp > 0:
         ax.plot((0, (df['ind'].max() * 1.005)), (-(np.log10(float(sigp))), -(np.log10(float(sigp)))), ls='--', lw=1.2, color=sigcolor)
     if sugp > 0:

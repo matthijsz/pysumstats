@@ -2,14 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def qqplot(pvector, filename=None, size=1, pointcolor='black', title=None, linecolor='red'):
+def qqplot(pvector, fig=None, ax=None, filename=None, figsize=(8, 8), pointcolor='black', title=None, linecolor='red'):
     """Function to generate a QQ-plot.
 
     :param pvector: 1D-array of p-values
+    :param fig: matplotlib.pyplot figure object to plot to (if not specified a new figure will be created)
+    :param ax: matplotlib.pyplot axis to plot to (if not specified a new figure will be created)
     :param filename: Path to store the figure to (defaults to return fig, ax objects)
     :type filename: str.
-    :param size: Relative figure size (default=1)
-    :type size: int or float
+    :param figsize: Figure size
+    :type figsize: (int, int)
     :param pointcolor: Color to use for points
     :type pointcolor: str.
     :param title: Main figure title.
@@ -24,7 +26,8 @@ def qqplot(pvector, filename=None, size=1, pointcolor='black', title=None, linec
     pvector.sort()
     o = -(np.log10(pvector))
     e = -(np.log10((np.array(range(1, (len(o) + 1))) - .5) / len(o)))
-    fig, ax = plt.subplots(1, 1, figsize=(8 * int(size), 8 * int(size)), dpi=300*(int(size)**2), facecolor='w')
+    if (fig is None) and (ax is None):
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=300*(int(figsize[0]/8)**2), facecolor='w')
     ax.tick_params(axis='both', which='major', labelsize=10)
     ax.tick_params(axis='both', which='minor', labelsize=8)
     maxi = max(np.amax(e), np.amax(o))

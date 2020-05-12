@@ -11,6 +11,7 @@ import pickle
 import os
 import copy
 import numpy as np
+import time
 
 
 class _Loc:
@@ -66,7 +67,7 @@ class _H5SSConnection:
     def values(self):
         """
 
-        :return: yields data per chromosome
+        :return: yield data at each chromosome
         """
         for i in self.keys():
             yield self[i]
@@ -74,7 +75,7 @@ class _H5SSConnection:
     def items(self):
         """
 
-        :return: tuple of chromosme number, and data.
+        :return: yield (chromsome number, data)
         """
         for i in self.keys():
             yield i, self[i]
@@ -190,11 +191,11 @@ class _BaseSumStats:
         """Sorts values in the dataframe. Note: Sorting by chromosme (chr) will have no effect as data is already structured by chromosome.
 
         :param by: label of the column to sort values by
-        :typpe by: str.
+        :type by: str
         :param inplace: Whether to return the sorted object or sort values within existing object. (Currently only inplace sorting is supported)
-        :type inplace: bool.
+        :type inplace: bool
         :param kwargs: Other keyword arguments to be passed to pandas sort_values function
-        :return: None.
+        :return: Non
 
         """
         if not inplace:
@@ -220,9 +221,9 @@ class _BaseSumStats:
         """Save the data held in this object to local storage.
 
         :param path: Relative or full path to the target file to store the data or object in. Paths ending in .pickle will save a pickled version of the full object. Note that with low_ram enabled this will **not** store the data.
-        :type path: str.
+        :type path: str
         :param per_chromosome: Whether to save seperate files for each chromosome.
-        :type per_chromosome: bool.
+        :type per_chromosome: bool
         :param kwargs: keyword arguments to be passed to pandas to_csv() function.
         :return: None
         """
@@ -271,11 +272,11 @@ class _BaseSumStats:
         """Prints (n_chromosomes) dataframes with the first n rows.
 
         :param n: number of rows to show
-        :type n: int.
+        :type n: int
         :param n_chromosomes: number of chromosomes to show.
-        :type n_chromosomes: int.
+        :type n_chromosomes: int
         :param kwargs: keyword arguments to be passed to pandas head function
-        :return: None.
+        :return: None
 
         """
         for n_chr in range(1, n_chromosomes + 1):
@@ -285,11 +286,11 @@ class _BaseSumStats:
         """Prints (n_chromosomes) dataframes with the last n rows.
 
         :param n: number of rows to show
-        :type n: int.
+        :type n: int
         :param n_chromosomes: number of chromosomes to show.
-        :type n_chromosomes: int.
+        :type n_chromosomes: int
         :param kwargs: keyword arguments to be passed to pandas tail function
-        :return: None.
+        :return: None
 
         """
         for n_chr in range(23, 23 - n_chromosomes):
@@ -299,10 +300,10 @@ class _BaseSumStats:
         """A function to generate summaries.
 
         :param sum_cols: columns to generate summaries from
-        :type sum_cols: list.
+        :type sum_cols: list
         :param per_chromosome: Generate summaries per chromosome
-        :type per_chromosome: bool.
-        :return: pandas dataframe of summaries
+        :type per_chromosome: bool
+        :return: pd.DataFrame
 
         """
         summary = {}
@@ -335,3 +336,38 @@ class _BaseSumStats:
             summary = pd.concat(list(summary.values()), axis=1)
             summary.columns = cols
             return summary
+
+    def plot_all(self, dest='.', prefix='SumStatsPlots', kwargs={}):
+        """Runs all attached plot functions
+
+        :param dest: Folder to save resulting files to. File names will be: {prefix}_{plottype}_{YEAR-MONTH-DAY}.png
+        :type dest: str
+        :param prefix: prefix to use when saving files.
+        :type prefix: str
+        :param kwargs: Nested dictionary of other keyword arguments to be passed to each function (keys of top-level dictionary should be function names). Use the 'all' key the top level dictionary to pass keyword argument to every function.
+        :type kwargs: dict
+        :return: None
+        """
+        if (prefix != '') and (not prefix.endswith('_')):
+            prefix += '_'
+        if not os.path.isdir(dest):
+            raise IOError('Destination is not an existing folder.')
+        if 'all' in kwargs.keys():
+            for func_key in self.plot_funcs.keys():
+                if func_key not in kwargs.keys():
+                    kwargs[func_key] = {}
+                for k, v in kwargs['all'].items():
+                    kwargs[func_key][k] = v
+        for funcname, func in self.plot_funcs.items():
+            if funcname in kwargs.keys():
+                if 'filename' not in kwargs.keys():
+                    kwargs['filename'] = '{}/{}{}_{}.png'.format(dest, prefix, funcname, time.strftime('%Y-%m-%d'))
+                func(**kwargs[funcname])
+        for funcname, func in self.plot_funcs.items():
+            if funcname in kwargs.keys():
+                if 'filename' not in kwargs[funcname].keys():
+                    kwargs[funcname]['filename'] = '{}/{}{}_{}.png'.format(dest, prefix, funcname,
+                                                                           time.strftime('%Y-%m-%d'))
+                func(**kwargs[funcname])
+            else:
+                func(filename='{}/{}{}_{}.png'.format(dest, prefix, funcname, time.strftime('%Y-%m-%d')))
