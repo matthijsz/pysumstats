@@ -6,6 +6,9 @@
 
 # Patch notes
 
+##### 12-05-2020 (v0.3.1)
+ - Fixed an issue where reading data would fail when values in n, bp, chr columns were NA. An attempt is now made to impute these values. If too many are missing a ValueError is thrown.
+
 ##### 12-05-2020 (v0.3)
  - Added `fig` and `ax` arguments to `pysumstats.plot.qqplot` and `pysumstats.plot.manhattan` to enable plotting to existing figure and axis.
  - Added `pysumstats.plot.pzplot`, to visually compare Z-values from `B/SE` to Z-values calculated from the P-value.

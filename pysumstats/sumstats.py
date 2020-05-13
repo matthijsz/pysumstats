@@ -136,6 +136,25 @@ class SumStats(_BaseSumStats):
                 warnings.warn('No N found or specified, samplesize based meta analysis not possible')
             else:
                 self.data['n'] = self.gwas_n
+        else:
+            if np.any(self.data['n'].isna()):
+                nnna = np.sum(self.data['n'].isna())
+                warnings.warn('{} missing values in sample size column were mean imputed'.format(nnna))
+                self.data.loc[self.data['n'].isna(), 'n'] = self.data['n'].mean()
+        if np.any(self.data['bp'].isna()):
+            naidx = np.where(self.data['bp'].isna())
+            self.data.loc[naidx[0], 'bp'] = (self.data.loc[naidx[0] - 1, 'bp'] + 1).tolist()
+            if np.any(self.data['bp'].isna()):
+                raise ValueError('Too many missing values in basepair column')
+            else:
+                warnings.warn('{} missing values in basepair column were imputed to be (bp at the previous row)+1'.format(len(naidx)))
+        if np.any(self.data['chr'].isna()):
+            naidx = np.where(self.data['chr'].isna())
+            self.data.loc[naidx[0], 'chr'] = (self.data.loc[naidx[0] - 1, 'chr']).tolist()
+            if np.any(self.data['chr'].isna()):
+                raise ValueError('Too many missing values in chromosome column')
+            else:
+                warnings.warn('{} missing values in chromosome column were imputed to be the same as chromsome of the previous row'.format(len(naidx)))
         if len(not_found) > 0:
             raise KeyError('Could not find columns: {}'.format(', '.join(not_found)))
         self.data['ea'] = self.data['ea'].str.upper()
