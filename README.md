@@ -6,7 +6,7 @@
 
 # Patch notes
 
-##### 12-05-2020 (v0.3.1)
+##### 13-05-2020 (v0.3.1)
  - Fixed an issue where reading data would fail when values in n, bp, chr columns were NA. An attempt is now made to impute these values. If too many are missing a ValueError is thrown.
 
 ##### 12-05-2020 (v0.3)
