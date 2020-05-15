@@ -1,13 +1,13 @@
 from setuptools import setup
-# read the contents of your README file
 from os import path
+
 this_directory = path.abspath(path.dirname(__file__))
 
 with open(path.join(this_directory, 'README.md'), 'r', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='pysumstats',
-      version='0.3.1',
+      version='0.4',
       description='Package for working with GWAS summary statistics',
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -22,7 +22,7 @@ setup(name='pysumstats',
           'tables',
           'numpy',
           'scipy',
-          'matplotlib',
+          'matplotlib'
       ],
       classifiers=[
         'Development Status :: 4 - Beta',

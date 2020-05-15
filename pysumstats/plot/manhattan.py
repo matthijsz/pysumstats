@@ -1,10 +1,14 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import is_color_like
+from collections.abc import Iterable
+from .qcplots import _assert_plot_defaults
 
 
 def manhattan(dataframe, fig=None, ax=None, filename=None, sigp=5e-8, sigcolor='black', sugp=1e-5, sugcolor='black',
-              pointcolor=['midnightblue', 'goldenrod'], figsize=(12, 6), highlight=[],
-              highlightcolor=['orange'], title=None, rainbow=False):
+              pointcolors=['midnightblue', 'goldenrod'], figsize=(12, 6), highlight=[],
+              highlightcolors=['orange'], title=None, rainbow=False):
     """Create a Manhattan plot.
 
     :param dataframe: pd.Dataframe containing the following columns: ['rsid', 'chr', 'bp', 'p'], or :class:`pysumstats.SumStats`
@@ -20,28 +24,46 @@ def manhattan(dataframe, fig=None, ax=None, filename=None, sigp=5e-8, sigcolor='
     :type sugp: float
     :param sugcolor: Color to use for suggestive line
     :type sugcolor: str
-    :param pointcolor: Color, or list of colors to cycle through for plotting SNPs
-    :type pointcolor: list
-    :param figsize: Figure size
-    :type figsize: (int, int)
+    :param pointcolors: List of colors to cycle through for plotting SNPs
+    :type pointcolors: list
+    :param figsize: Figure size in inches (width, height)
+    :type figsize: (float, float)
     :param highlight: list of SNPs to highlight
     :type highlight: list.
-    :param highlightcolor: Color, or list of colors to cycle through for highlighting SNPs
-    :type highlightcolor: list.
+    :param highlightcolors: List of colors to cycle through for highlighting SNPs
+    :type highlightcolors: list.
     :param title: Main figure title
     :type title: list.
     :param rainbow: Enble rainbow colors
     :type rainbow: bool.
     :return: None, or (fig, ax)
-
     """
-    df = dataframe[['rsid', 'chr', 'bp', 'p']].copy()
+    assert isinstance(dataframe, pd.DataFrame), 'dataframe should be a pandas.DataFrame object'
+    assert np.all([x in dataframe.columns for x in ['chr', 'bp', 'p']]), "dataframe should contain ['chr', 'bp', 'p'] columns"
+    assert isinstance(sigp, int) or isinstance(sigp, float), "sigp should be float"
+    assert isinstance(sugp, int) or isinstance(sugp, float), "sigp should be float"
+    assert is_color_like(sugcolor), "sugcolor should be interpretable as matplotlib color"
+    assert is_color_like(sigcolor), "sigcolor should be interpretable as matplotlib color"
+    assert isinstance(pointcolors, Iterable), "pointcolor should be list"
+    for p in pointcolors:
+        assert is_color_like(p), "values in highlightcolor should be interpretable as matplotlib color"
+    assert isinstance(highlightcolors, Iterable), "highlightcolor should be list"
+    for p in highlightcolors:
+        assert is_color_like(p), "values in highlightcolor should be interpretable as matplotlib color"
+    assert (title is None) or isinstance(title, str), "title should be None or str"
+    assert isinstance(rainbow, bool), "rainbow should be bool"
+    _assert_plot_defaults(fig=fig, ax=ax, filename=filename, title=title, figsize=figsize)
+
+    if 'rsid' in dataframe.columns:
+        df = dataframe[['rsid', 'chr', 'bp', 'p']].copy()
+    else:
+        df = dataframe[['chr', 'bp', 'p']].copy()
     df.columns = map(str.lower, df.columns)
     if rainbow:
-        pointcolor = ['#FF0000', '#FF4000', '#FF8000', '#FFBF00', '#FFFF00', '#BFFF00', '#80FF00', '#40FF00', '#00FF00',
+        pointcolors = ['#FF0000', '#FF4000', '#FF8000', '#FFBF00', '#FFFF00', '#BFFF00', '#80FF00', '#40FF00', '#00FF00',
                       '#00FF40', '#00FF80', '#00FFBF', '#00FFFF', '#00BFFF', '#0080FF', '#0040FF', '#0000FF', '#4000FF',
                       '#8000FF', '#BF00FF', '#FF00FF', '#FF00BF']
-        highlightcolor = list(reversed(pointcolor))
+        highlightcolors = list(reversed(pointcolors))
     df['logp'] = -(np.log10(df['p']))
     df['chromosome'] = df['chr'].astype('category')
     df['chromosome'] = df['chromosome'].cat.set_categories(['ch-%i' % i for i in range(23)], ordered=True)
@@ -58,7 +80,7 @@ def manhattan(dataframe, fig=None, ax=None, filename=None, sigp=5e-8, sigcolor='
     df_grouped = df.groupby('chr')
     if (fig is None) and (ax is None):
         fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=300*(float(figsize[0]/12)**2), facecolor='w')
-    colors = pointcolor
+    colors = pointcolors
     x_labels = []
     x_labels_pos = []
     for num, (name, group) in enumerate(df_grouped):
@@ -68,8 +90,8 @@ def manhattan(dataframe, fig=None, ax=None, filename=None, sigp=5e-8, sigcolor='
         x_labels_pos.append((group['ind'].mean()))
     if len(highlight) > 0:
         for num, (name, group) in enumerate(dfhighlight_grouped):
-            group.plot(kind='scatter', x='ind', y='logp', color=highlightcolor[num % len(highlightcolor)],
-                       edgecolor=highlightcolor[num % len(highlightcolor)], ax=ax, marker='^', s=45)
+            group.plot(kind='scatter', x='ind', y='logp', color=highlightcolors[num % len(highlightcolors)],
+                       edgecolor=highlightcolors[num % len(highlightcolors)], ax=ax, marker='^', s=45)
     if sigp > 0:
         ax.plot((0, (df['ind'].max() * 1.005)), (-(np.log10(float(sigp))), -(np.log10(float(sigp)))), ls='--', lw=1.2, color=sigcolor)
     if sugp > 0:

@@ -1,11 +1,13 @@
 import pandas as pd
-import warnings
 import os
+import pickle
 import numpy as np
+from collections.abc import Iterable
 from scipy.stats import norm
 from .base import _BaseSumStats, _H5SSConnection
-from .utils import _MultiWindowPlot
+from .utils import _MultiWindowPlot, _recompute_maf
 from .plot import (manhattan, qqplot, afplot, zzplot, pzplot)
+from .exceptions import sumstatswarn
 
 pd.options.mode.chained_assignment = None
 
@@ -27,11 +29,17 @@ class SumStats(_BaseSumStats):
     :type low_ram: bool
     :param tmpdir: Which directory to store the temporary files if low_ram is enabled.
     :type tmpdir: str
+    :param kwargs: other keyword arguments to be passed to pandas.read_csv() method
 
     """
 
     def __init__(self, path, phenotype=None, gwas_n=None, column_names=None, data=None, low_ram=False,
-                 tmpdir='sumstats_temporary'):
+                 tmpdir='sumstats_temporary', **kwargs):
+        assert isinstance(path, str),  "path should be str"
+        assert isinstance(phenotype, str) or (phenotype is None), "phenotype should be str"
+        assert isinstance(gwas_n, int) or gwas_n is None, "gwas_n should be int"
+        assert isinstance(low_ram, bool), "low_ram should be True or False"
+        assert isinstance(tmpdir, str), "tmpdir should be str"
         super().__init__()
         self.low_ram = low_ram
         self.tmpdir = tmpdir
@@ -42,20 +50,42 @@ class SumStats(_BaseSumStats):
             self.phenotype_name = phenotype
         self.column_names = column_names
         if path is not None:
-            if path.endswith('.txt') or path.endswith('.txt.gz') or path.endswith('.tsv') or path.endswith('.tsv.gz'):
-                self.data = pd.read_csv(path, sep='\t')
-            elif path.endswith('.csv') or path.endswith('.csv.gz'):
-                self.data = pd.read_csv(path)
+            if path.endswith('.pickle'):
+                with open(path, 'rb') as f:
+                    sumstatsobj = pickle.load(f)
+                if sumstatsobj.low_ram:
+                    if not os.path.isfile(sumstatsobj.data.path):
+                        raise ImportError(
+                            'The data that was stored in {} using low_ram does not exist anymore.'.format(path))
+                if self.__version__ != sumstatsobj.__version__:
+                    if self.__version__.split('.')[0] != sumstatsobj.__version__.split('.')[0]:
+                        pass  # What to do in case of major version differences: No problem yet.
+                    else:
+                        sumstatswarn('Imported sumstats version {} does not match current version {}'.format(
+                            sumstatsobj.__version__, self.__version__))
+                for k, v in {m: getattr(sumstatsobj, m) for m in dir(sumstatsobj) if
+                             (not m.startswith('__'))}.items():
+                    setattr(self, k, v)
+                self.__version__ = sumstatsobj.__version__
             else:
-                raise ImportError('Only .txt(.gz), .tsv(.gz), and .csv(.gz) files are supported.')
+                if 'sep' not in kwargs.keys():
+                    if path.endswith('.txt') or path.endswith('.txt.gz') or path.endswith('.tsv') or path.endswith('.tsv.gz'):
+                            self.data = pd.read_csv(path, sep='\t', **kwargs)
+                    elif path.endswith('.csv') or path.endswith('.csv.gz'):
+                        self.data = pd.read_csv(path, **kwargs)
+                    else:
+                        raise ImportError('Only .txt(.gz), .tsv(.gz) or .csv(.gz) files allowed when \'sep\' is not specified.')
+                else:
+                    self.data = pd.read_csv(path, **kwargs)
             self.gwas_n = gwas_n
-            self.qc_result = {}
+
             self._sync_columns()
             self._split()
         else:
             self.phenotype_name = phenotype
             self.data = data
             self.reset_index()
+        self.qc_result = {}
         self.columns = self.data[1].columns
 
     def _sync_columns(self):
@@ -72,8 +102,8 @@ class SumStats(_BaseSumStats):
             'rsid': ['rsid', 'rs', 'rsnumber'],
             'chr': ['chr', 'chromosome'],
             'bp': ['bp', 'pos'],
-            'ea': ['a1', 'ea', 'effectallele', 'allele1'],
-            'oa': ['a2', 'oa', 'otherallele', 'allele0', 'allele2'],
+            'ea': ['a1', 'ea', 'effectallele', 'allele1', 'ref', 'refallele'],
+            'oa': ['a2', 'oa', 'otherallele', 'allele0', 'allele2', 'alt', 'altallele'],
             'maf': ['maf', 'minorallelefrequency', 'minfreq'],
             'b': ['b', 'beta', 'effect'],
             'se': ['se', 'stderr'],
@@ -82,7 +112,7 @@ class SumStats(_BaseSumStats):
             'info': ['info', 'rsq', 'r2'],
             'n': ['n', 'nchrobs', 'samplesize', 'totalsamplesize']
         }
-        column_name_variants2 = {
+        column_name_variants_af = {
             'eaf': ['a1freq', 'a1frq', 'a1f', 'eaf', 'freq1'],
             'oaf': ['a2freq', 'a2frq', 'a2f', 'oaf', 'freq2'],
         }
@@ -91,40 +121,42 @@ class SumStats(_BaseSumStats):
                         'n': np.uint32, 'eaf': np.float32, 'oaf': np.float32}
         if self.column_names is not None:
             for k, v in self.column_names:
-                if (k not in column_name_variants) and (k not in column_name_variants2):
+                if (k not in column_name_variants) and (k not in column_name_variants_af):
                     raise KeyError('{} not recognized as column type'.format(k))
                 elif k in column_name_variants:
                     column_name_variants[k] = [v]
-                elif k in column_name_variants2:
-                    column_name_variants2[k] = [v]
-        found, found2, not_found = [], [], []
+                elif k in column_name_variants_af:
+                    column_name_variants_af[k] = [v]
+        found, found_af, not_found = [], [], []
         for target, options in column_name_variants.items():
             for opt in options:
                 if opt in self.data.columns:
                     self.data.rename(columns={opt: target}, inplace=True)
                     found += [target]
+                    break
             if (target == 'rsid') and ('rsid' not in found):
-                for opt in ['snp', 'snpid', 'cptid', 'markername']:
+                for opt in ['snpname', 'snp', 'snpid', 'cptid', 'markername']:
                     if opt in self.data.columns:
                         self.data.rename(columns={opt: target}, inplace=True)
                         found.append(target)
-                        warnings.warn(
-                            'Assuming column {} represents rsid as no other rsid column was found'.format(opt))
+                        sumstatswarn(
+                            'Assuming column {} represents rsid as no other rsid column was found.'.format(opt))
+                        break
         if self.data['rsid'].isnull().values.any():
-            warnings.warn('Missing RSIDs were replace with CHR:BP')
-            self.data.loc[self.data['rsid'].isnull(), 'rsid'] = self.data.loc[self.data['rsid'].isnull(), 'chr'].map(
-                str) + ':' + self.data.loc[self.data['rsid'].isnull(), 'bp'].map(str)
-        for target, options in column_name_variants2.items():
+            sumstatswarn('Missing RSIDs were replaced with CHR:BP')
+            midx = self.data['rsid'].isnull()
+            self.data.loc[midx, 'rsid'] = self.data.loc[midx, 'chr'].map(str) + ':' + self.data.loc[midx, 'bp'].map(str)
+        for target, options in column_name_variants_af.items():
             for opt in options:
                 if opt in self.data.columns:
                     self.data.rename(columns={opt: target}, inplace=True)
-                    found2.append(target)
+                    found_af.append(target)
         if 'maf' not in found:
-            if len(found2) == 0:
+            if len(found_af) == 0:
                 raise KeyError('No allele frequency column found')
-            if ('eaf' in found2) and ('oaf' not in found2):
+            if ('eaf' in found_af) and ('oaf' not in found_af):
                 self.data['oaf'] = 1 - self.data['eaf']
-            elif ('eaf' not in found2) and ('oaf' in found2):
+            elif ('eaf' not in found_af) and ('oaf' in found_af):
                 self.data['eaf'] = 1 - self.data['oaf']
             self.data['maf'] = self.data[['eaf', 'oaf']].min(axis=1)
             found.append('maf')
@@ -133,13 +165,13 @@ class SumStats(_BaseSumStats):
                 not_found.append(target)
         if 'n' not in self.data.columns:
             if self.gwas_n is None:
-                warnings.warn('No N found or specified, samplesize based meta analysis not possible')
+                sumstatswarn('No N found or specified, samplesize based meta analysis not possible')
             else:
                 self.data['n'] = self.gwas_n
         else:
             if np.any(self.data['n'].isna()):
                 nnna = np.sum(self.data['n'].isna())
-                warnings.warn('{} missing values in sample size column were mean imputed'.format(nnna))
+                sumstatswarn('{} missing values in sample size column were mean imputed'.format(nnna))
                 self.data.loc[self.data['n'].isna(), 'n'] = self.data['n'].mean()
         if np.any(self.data['bp'].isna()):
             naidx = np.where(self.data['bp'].isna())
@@ -147,14 +179,22 @@ class SumStats(_BaseSumStats):
             if np.any(self.data['bp'].isna()):
                 raise ValueError('Too many missing values in basepair column')
             else:
-                warnings.warn('{} missing values in basepair column were imputed to be (bp at the previous row)+1'.format(len(naidx)))
+                sumstatswarn('{} missing values in basepair column were imputed to be (bp at the previous row)+1'.format(len(naidx)))
         if np.any(self.data['chr'].isna()):
             naidx = np.where(self.data['chr'].isna())
             self.data.loc[naidx[0], 'chr'] = (self.data.loc[naidx[0] - 1, 'chr']).tolist()
             if np.any(self.data['chr'].isna()):
                 raise ValueError('Too many missing values in chromosome column')
             else:
-                warnings.warn('{} missing values in chromosome column were imputed to be the same as chromsome of the previous row'.format(len(naidx)))
+                sumstatswarn('{} missing values in chromosome column were imputed to be the same as chromsome of the previous row'.format(len(naidx)))
+        try:
+            self.data['chr'] = self.data['chr'].astype(int)
+        except ValueError:
+            self.data['chr'].str.replace('X', '23')
+            try:
+                self.data['chr'] = self.data['chr'].astype(int)
+            except ValueError:
+                raise ValueError('Could not convert chromosome column to integer')
         if len(not_found) > 0:
             raise KeyError('Could not find columns: {}'.format(', '.join(not_found)))
         self.data['ea'] = self.data['ea'].str.upper()
@@ -170,14 +210,6 @@ class SumStats(_BaseSumStats):
         :return: None
 
         """
-        try:
-            self.data['chr'] = self.data['chr'].astype(int)
-        except ValueError:
-            self.data['chr'].str.replace('X', '23')
-            try:
-                self.data['chr'] = self.data['chr'].astype(int)
-            except ValueError:
-                raise ValueError('Could not convert chromosome column to integer')
         if not self.low_ram:
             new_data = {}
         else:
@@ -185,34 +217,46 @@ class SumStats(_BaseSumStats):
         for c in range(1, 24):
             new_data[c] = self.data.loc[self.data['chr'] == c, :].copy()
             if len(new_data[c]) == 0:
-                warnings.warn('No data found for chromosome {}'.format(c))
+                sumstatswarn('No data found for chromosome {}'.format(c))
         self.data = new_data
 
-    def qc(self, maf=None, hwe=None, info=None):
+    def qc(self, maf=None, hwe=None, info=None, **kwargs):
         """Basic GWAS quality control function.
 
         :param maf: Minor allele frequency cutoff, will drop SNPs where MAF < cutoff. Default: 0.1
+        :type maf: float or None
         :param hwe: Hardy-Weinberg Equilibrium cutoff, will drop SNPs where HWE < cutoff, if specified and HWE column is present in the data.
+        :type hwe: float or None
         :param info: Imputation quality cutoff, will drop SNPs where Info < cutoff, if specified and Info column is present in the data.
+        :type info: float or None
+        :param kwargs: Other columns to filter on, keyword should be column name, SNPs whill be dropped where the value < argument.
         :return: None
 
         """
+        assert isinstance(maf, float) or (maf is None), "maf should be float"
+        assert isinstance(hwe, float) or (hwe is None), "hwe should be float"
+        assert isinstance(info, float) or (info is None), "info should be float"
         qc_vals = dict(maf=.01)
         qc_info = dict(org_len=0, maf=0, new_len=0)
         if maf is not None:
             qc_vals['maf'] = maf
         if hwe is not None:
             if 'hwe' not in self.variables:
-                warnings.warn('HWE qc cutoff specified but HWE column was not found, skipping QC step.')
+                sumstatswarn('HWE qc cutoff specified but HWE column was not found, skipping QC step.')
             else:
                 qc_vals['hwe'] = hwe
                 qc_info['hwe'] = 0
         if info is not None:
             if 'info' not in self.variables:
-                warnings.warn('Info qc cutoff specified but info column was not found, skipping QC step.')
+                sumstatswarn('Info qc cutoff specified but info column was not found, skipping QC step.')
             else:
                 qc_vals['info'] = info
                 qc_info['info'] = 0
+        for k, v in kwargs.items():
+            if k not in self.variables:
+                raise KeyError('Column {} not found.'.format(k))
+            else:
+                qc_vals[k] = v
         for c in range(1, 24):
             data = self.data[c]
             qc_info['org_len'] += len(data)
@@ -224,32 +268,37 @@ class SumStats(_BaseSumStats):
             self.data[c] = data
         self.qc_result = qc_info
 
-    def merge(self, other, low_memory=False):
+    def merge(self, other, how='inner', low_memory=False):
         """Merge with other SumStats object(s).
 
         :param other: Other sumstats object, or list of other SumStats objects.
-        :type other: SumStats or list.
+        :type other: :class:`pysumstats.plot.SumStats` or list
+        :param how: Type of merge.
+        :type how: str
         :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
-        :type low_memory: bool.
-        :return: :class:`pysumstats.plot.MergedSumstats` object.
+        :type low_memory: bool
+        :return: :class:`pysumstats.plot.MergedSumStats` object
 
         """
+        assert isinstance(other, SumStats) or isinstance(other, list), "other should be SumStats or list"
         if isinstance(other, list):
+            for o in other:
+                assert isinstance(o, SumStats), "items in other should be SumStats"
             merged = self.merge(other[0], low_memory=low_memory)
             merged.merge(other[1:], inplace=True, low_memory=low_memory)
             return merged
         else:
             if self.phenotype_name == other.phenotype_name:
-                warnings.warn('Phenotype names were equal, converting to {0}_x and {0}_y'.format(self.phenotype_name))
+                sumstatswarn('Phenotype names were equal, converting to {0}_x and {0}_y'.format(self.phenotype_name))
                 self.phenotype_name = self.phenotype_name + '_x'
                 other.phenotype_name = other.phenotype_name + '_y'
             merge_info = dict(xlen=0, ylen=0, newlen=0)
             joined = [x for x in self.variables if x in other.variables]
             for x in [x for x in self.variables if x not in joined]:
-                warnings.warn(
+                sumstatswarn(
                     'Could not find column {} in pysumstats for {}, column dropped'.format(x, other.phenotype_name))
             for x in [x for x in other.variables if x not in joined]:
-                warnings.warn(
+                sumstatswarn(
                     'Could not find column {} in pysumstats for {}, column dropped'.format(x, self.phenotype_name))
             if not self.low_ram:
                 merged_data = {}
@@ -258,6 +307,10 @@ class SumStats(_BaseSumStats):
                     '{}{}{}{}{}'.format(self.phenotype_name[0], self.phenotype_name[-1], other.phenotype_name[0],
                                         other.phenotype_name[1], len(os.listdir('sumstats_temporary'))),
                     tmpdir=self.tmpdir)
+            if 'n' not in self.columns:
+                sumstatswarn('No sample size column found for {}, using 1 for calculation of overall MAF'.format(self.phenotype_name))
+            if 'n' not in other.columns:
+                sumstatswarn('No sample size column found for {}, using 1 for calculation of overall MAF'.format(other.phenotype_name))
             for c in range(1, 24):
                 data_x = self.data[c].copy()
                 merge_info['xlen'] += len(data_x)
@@ -287,7 +340,8 @@ class SumStats(_BaseSumStats):
                                                         x not in ['rsid', 'chr', 'bp']]
                     joined_y = ['rsid'] + [x + '_' + other.phenotype_name for x in joined if
                                            x not in ['rsid', 'chr', 'bp']]
-                    merged_data[c] = data_m_x[joined_x].merge(data_m_y[joined_y], on='rsid')
+                    merged_data[c] = data_m_x[joined_x].merge(data_m_y[joined_y], on='rsid', how=how)
+                merged_data[c]['maf'] = _recompute_maf(merged_data[c], [self.phenotype_name, other.phenotype_name])
                 merge_info['newlen'] += len(merged_data[c])
             return MergedSumStats(data=merged_data, phenotypes=[self.phenotype_name, other.phenotype_name],
                                   merge_info=merge_info, variables=joined,
@@ -304,6 +358,8 @@ class SumStats(_BaseSumStats):
         :return: pd.Dataframe, or list
 
         """
+        assert isinstance(columns, list) or (columns is None), "columns should be a list"
+        assert isinstance(per_chromosome, bool), "per_chromosome should be True or False"
         if columns is None:
             columns = ['b', 'se', 'p']
         if (not isinstance(columns, list)) and isinstance(columns, str):
@@ -312,6 +368,8 @@ class SumStats(_BaseSumStats):
         for c in columns:
             if c in self.data[1].columns:
                 sum_cols.append(c)
+            else:
+                sumstatswarn('{} not found in columns, skipping.'.format(c))
         return self._get_summary(sum_cols, per_chromosome)
 
     def manhattan(self, **kwargs):
@@ -427,7 +485,7 @@ class MergedSumStats(_BaseSumStats):
             self.data[c] = data2
         self.columns = self.data[1].columns
         if dropped > 0:
-            warnings.warn('Dropped {} SNPs due to allele mismatch'.format(dropped))
+            sumstatswarn('Dropped {} SNPs due to allele mismatch'.format(dropped))
         self.suffixes = [None, None]
 
     def meta_analyze(self, name='meta', method='ivw'):
@@ -440,15 +498,26 @@ class MergedSumStats(_BaseSumStats):
         :return: :class:`pysumstats.SumStats` object.
 
         """
+        assert isinstance(name, str), "name should be str"
         if not self.low_ram:
             new_data = {}
         else:
             new_data = _H5SSConnection(name, tmpdir=self.tmpdir)
         if method not in ['ivw', 'samplesize']:
             raise KeyError('method should be one of [\'ivw\', \'samplesize\']')
+        columns = self.data[1].columns
+        missing_n = []
+        for p in self.pheno_names:
+            if 'n_{}'.format(p) not in columns:
+                missing_n.append(p)
+        if len(missing_n) > 0:
+            if method == 'samplesize':
+                raise KeyError('Missing sample size column for {}.'.format(', '.join(missing_n)))
+            else:
+                sumstatswarn('Missing sample size column for {}, output N will be incorrect.'.format(', '.join(missing_n)))
         for c in self.data.keys():
             data = self.data[c]
-            n_dat = data[['rsid', 'chr', 'bp', 'ea', 'oa']]
+            n_dat = data[['rsid', 'chr', 'bp', 'ea', 'oa', 'maf']]
             if method == 'samplesize':
                 for p in self.pheno_names:
                     data.loc[:, 'z_{}'.format(p)] = data['b_{}'.format(p)] / data['se_{}'.format(p)]
@@ -467,6 +536,10 @@ class MergedSumStats(_BaseSumStats):
                 n_dat.loc[:, 'b'] = bwsums / wsums
                 n_dat.loc[:, 'z'] = n_dat.loc[:, 'b'] / n_dat.loc[:, 'se']
             n_dat.loc[:, 'p'] = norm.sf(abs(n_dat.loc[:, 'z'])) * 2
+            n_dat['n'] = 0
+            for p in self.pheno_names:
+                if 'n_{}'.format(p) in n_dat.columns:
+                    n_dat['n'] += data['n_{}'.format(p)]
             new_data[c] = n_dat
         new_columns = list(new_data[c].columns)
         new_data = SumStats(path=None, phenotype=name, data=new_data)
@@ -484,8 +557,10 @@ class MergedSumStats(_BaseSumStats):
         :return: :class:`pysumstats.SumStats` object
 
         """
+        assert isinstance(cov_matrix, pd.DataFrame), "cov_matrix should be a pd.DataFrame"
+        assert isinstance(name, str), "name should be a string"
         if h2_snp is None:
-            warnings.warn('h2-snp not specified, using ones instead. This will bias the estimates')
+            sumstatswarn('h2-snp not specified, using ones instead. This will bias the estimates')
             h2_snp = {x: 1 for x in self.pheno_names}
         elif (not isinstance(h2_snp, pd.DataFrame)) or isinstance(h2_snp, dict) or (not isinstance(h2_snp, pd.Series)):
             raise KeyError('h2-snp should be a dataframe or dictionary with phenotype names as keys or column names.')
@@ -532,7 +607,7 @@ class MergedSumStats(_BaseSumStats):
         i_cov_matrix = pd.DataFrame(np.linalg.inv(cov_matrix.to_numpy(dtype=np.float64)), index=cov_matrix.index,
                                     columns=cov_matrix.columns)
         for c in range(1, 24):
-            n_dat = self.data[c][['rsid', 'chr', 'bp', 'ea', 'oa']].copy()
+            n_dat = self.data[c][['rsid', 'chr', 'bp', 'ea', 'oa', 'maf']].copy()
             data = self.data[c]
             for p in self.pheno_names:
                 data['z_{}'.format(p)] = data['b_{}'.format(p)] / data['se_{}'.format(p)]
@@ -560,20 +635,29 @@ class MergedSumStats(_BaseSumStats):
         new_data.variables = new_columns
         return new_data
 
-    def merge(self, other, inplace=False, low_memory=False):
+    def merge(self, other, inplace=False, how='inner', low_memory=False):
         """ Merge with other SumStats or MergedSumstats object(s).
 
         :param other: :class:`pysumstats.SumStats`, or :class:`pysumstats.MergedSumStats` object, or a list of SumStats, MergedSumstats objects
         :type other: :class:`pysumstats.SumStats`, :class:`pysumstats.MergedSumStats`, or list.
         :param inplace: Enable to store the new data in the current MergedSumStats object. (currently not supported when low_ram is enabled)
         :type inplace: bool
+        :param how: Type of merge, for now only implemented for merges with :class:`pysumstats.SumStats` objects
+        :type how: str
         :param low_memory: Enable to use a more RAM-efficient merging method (WARNING: still untested)
         :type low_memory: bool
         :return: None, or :class:`pysumstats.MergedSumStats` object.
 
         """
+        assert isinstance(other, SumStats) or isinstance(other, MergedSumStats) or isinstance(other, list), "other should be SumStats, MergedSumStats or list"
+        assert isinstance(inplace, bool), "inplace should be True or False"
+        assert isinstance(how, str), "how should be a string"
+        assert isinstance(low_memory, bool), "low_memory should be True or False"
+        if isinstance(other, list):
+            for o in other:
+                assert isinstance(o, SumStats) or isinstance(o, MergedSumStats), "items in other should be SumStats or MergedSumStats"
         if self.low_ram and inplace:
-            return NotImplementedError('Merging inplace when low_ram is enabled is currently not supported.')
+            sumstatswarn('Inplace merging with low_ram currently does not yield any performance benefits.')
         if isinstance(other, list):
             if inplace:
                 for o in other:
@@ -586,14 +670,14 @@ class MergedSumStats(_BaseSumStats):
         else:
             if other.phenotype_name is not None:
                 if other.phenotype_name in self.pheno_names:
-                    warnings.warn(
+                    sumstatswarn(
                         'Phenotype name already in the dataset, converting to and {0}2'.format(other.phenotype_name))
                     other.phenotype_name = other.phenotype_name + '2'
                 self.suffixes[1] = other.phenotype_name
                 merge_info = dict(xlen=0, ylen=0, newlen=0)
                 joined = [x for x in other.variables if x in self.variables]
                 for x in [x for x in other.variables if x not in joined]:
-                    warnings.warn(
+                    sumstatswarn(
                         'Could not find column {} in pysumstats for {}, column dropped'.format(x, other.phenotype_name))
                 merged_data = {}
                 for c in range(1, 24):
@@ -623,7 +707,8 @@ class MergedSumStats(_BaseSumStats):
                     else:
                         joined_y = ['rsid'] + [x + '_' + other.phenotype_name for x in joined if
                                                x not in ['rsid', 'chr', 'bp']]
-                        merged_data[c] = data_x.merge(data_m_y[joined_y], on='rsid')
+                        merged_data[c] = data_x.merge(data_m_y[joined_y], on='rsid', how=how)
+                    merged_data[c]['maf'] = _recompute_maf(merged_data[c], self.pheno_names + [other.phenotype_name])
                     merge_info['newlen'] += len(merged_data[c])
                     new_phenos = self.pheno_names + [other.phenotype_name]
                 if not inplace:
@@ -663,6 +748,7 @@ class MergedSumStats(_BaseSumStats):
                     for oc in odat.columns:
                         sdat[oc] = odat[oc]
                     merged_data[c] = sdat
+                    merged_data[c]['maf'] = _recompute_maf(merged_data[c], self.pheno_names + other.pheno_names)
                 if inplace:
                     self.data = merged_data
                     self.columns = self.data[1].columns
@@ -685,6 +771,8 @@ class MergedSumStats(_BaseSumStats):
         :return: pd.Dataframe, or list of pd.Dataframes
 
         """
+        assert isinstance(columns, list) or (columns is None), "columns should be a list"
+        assert isinstance(per_chromosome, bool), "per_chromosome should be True or False"
         if columns is None:
             columns = ['b', 'se', 'p']
         if (not isinstance(columns, list)) and isinstance(columns, str):
@@ -695,6 +783,8 @@ class MergedSumStats(_BaseSumStats):
                 if '{}_{}'.format(c, self.pheno_names[0]) in self.data[1].columns:
                     for c2 in ['{}_{}'.format(c, p) for p in self.pheno_names]:
                         sum_cols.append(c2)
+                else:
+                    sumstatswarn('column {} not found'.format(c))
             else:
                 sum_cols.append(c)
         return self._get_summary(sum_cols, per_chromosome)
@@ -716,16 +806,28 @@ class MergedSumStats(_BaseSumStats):
         :return: None
 
         """
+        assert isinstance(exposure, str), "exposure should be a string"
+        assert isinstance(outcome, str), "exposure should be a string"
+        assert isinstance(filename, str) or isinstance(filename, list) or (filename is None), "filename should be a string or list of strings"
+        assert isinstance(p_cutoff, float), "p_cutoff should be a float"
+        assert isinstance(bidirectional, bool), "bidirectional should be True or False"
+        if isinstance(filename, list):
+            for o in filename:
+                assert isinstance(o, str), "filename should be a string or list of strings"
         if bidirectional and (not isinstance(filename, list)):
             raise ValueError(
-                'If bidirectional, filename should be a list of filenames: (exp-outcome)-name and (outcome-exp) name.')
+                'If bidirectional, filename should be a list of filenames: (exp-outcome) name and (outcome-exp) name.')
         mr_data = []
+        if exposure not in self.pheno_names:
+            raise KeyError('{} not found in phenotypes'.format(exposure))
+        if outcome not in self.pheno_names:
+            raise KeyError('{} not found in phenotypes'.format(outcome))
         for c in self.data.keys():
             if p_cutoff is None:
                 mr_data_ = self.data[c].copy()
             else:
-                mr_data_ = self.data[c].loc[self.data[c]['p_{}'.format(exposure)] <= p_cutoff, :]
-            newcols = [['se', 'se'], ['b', 'b'], ['se', 'se']]
+                mr_data_ = self.data[c].loc[self.data[c]['p_{}'.format(exposure)] <= p_cutoff, :].copy()
+            newcols = [['se', 'se'], ['b', 'b']]
             newcols2 = [[exposure, 'exposure'], [outcome, 'outcome']]
             renames = {'{}_{}'.format(old, x): '{}.{}'.format(x2, new) for x, x2 in newcols2 for old, new in newcols}
             mr_data_.rename(columns=renames, inplace=True)
@@ -769,8 +871,13 @@ class MergedSumStats(_BaseSumStats):
         :param kwargs: Other keyword arguments to be passed to :func:`pysumstats.plot.manhattan`
         :return: (fig, axes) or None.
         """
+        assert isinstance(filename, str) or (filename is None), "filename should be a string or None"
+        assert isinstance(phenotypes, list) or (phenotypes is None), "phenotypes should be a list of strings or None"
+        assert isinstance(dpi, int), "dpi should be an integer"
         if phenotypes is None:
             phenotypes = self.pheno_names
+        for p in phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         plotwindow = _MultiWindowPlot(len(phenotypes), nrows=nrows, ncols=ncols, figsize=figsize, shape='rect')
         dat = self[['rsid', 'chr', 'bp']]
         for phenotype in phenotypes:
@@ -801,8 +908,13 @@ class MergedSumStats(_BaseSumStats):
         :return: (fig, axes) or None.
 
         """
+        assert isinstance(filename, str) or (filename is None), "filename should be a string or None"
+        assert isinstance(phenotypes, list) or (phenotypes is None), "phenotypes should be a list of strings or None"
+        assert isinstance(dpi, int), "dpi should be an integer"
         if phenotypes is None:
             phenotypes = self.pheno_names
+        for p in phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         plotwindow = _MultiWindowPlot(len(phenotypes), nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
         for phenotype in phenotypes:
             fig, ax = plotwindow.get_next_ax()
@@ -831,8 +943,13 @@ class MergedSumStats(_BaseSumStats):
         :return: (fig, axes) or None.
 
         """
+        assert isinstance(filename, str) or (filename is None), "filename should be a string or None"
+        assert isinstance(phenotypes, list) or (phenotypes is None), "phenotypes should be a list of strings or None"
+        assert isinstance(dpi, int), "dpi should be an integer"
         if phenotypes is None:
             phenotypes = self.pheno_names
+        for p in phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         plotwindow = _MultiWindowPlot(len(phenotypes), nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
         for phenotype in phenotypes:
             dat = self[['{}_{}'.format(v, phenotype) for v in ['b', 'se', 'p']]].copy()
@@ -866,10 +983,18 @@ class MergedSumStats(_BaseSumStats):
         :return: (fig, axes) or None.
 
         """
+        assert isinstance(filename, str) or (filename is None), "filename should be a string or None"
+        assert isinstance(ref_phenotypes, list) or (ref_phenotypes is None), "ref_phenotypes should be a string or None"
+        assert isinstance(other_phenotypes, list) or (other_phenotypes is None), "other_phenotypes should be a string or None"
+        assert isinstance(dpi, int), "dpi should be an integer"
         if ref_phenotypes is None:
             ref_phenotypes = self.pheno_names
+        for p in ref_phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         if other_phenotypes is None:
             other_phenotypes = self.pheno_names
+        for p in other_phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         n_plots = len(ref_phenotypes) * len(other_phenotypes)
         plotwindow = _MultiWindowPlot(n_plots, nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
         for p1 in ref_phenotypes:
@@ -905,10 +1030,18 @@ class MergedSumStats(_BaseSumStats):
         :return: (fig, axes) or None.
 
         """
+        assert isinstance(filename, str) or (filename is None), "filename should be a string or None"
+        assert isinstance(ref_phenotypes, list) or (ref_phenotypes is None), "ref_phenotypes should be a string or None"
+        assert isinstance(other_phenotypes, list) or (other_phenotypes is None), "other_phenotypes should be a string or None"
+        assert isinstance(dpi, int), "dpi should be an integer"
         if ref_phenotypes is None:
             ref_phenotypes = self.pheno_names
+        for p in ref_phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         if other_phenotypes is None:
             other_phenotypes = self.pheno_names
+        for p in other_phenotypes:
+            assert p in self.pheno_names, "{} not found in phenotypes".format(p)
         n_plots = len(ref_phenotypes) * len(other_phenotypes)
         plotwindow = _MultiWindowPlot(n_plots, nrows=nrows, ncols=ncols, figsize=figsize, shape='square')
         for p1 in ref_phenotypes:

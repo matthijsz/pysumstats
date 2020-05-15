@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+from .qcplots import _assert_plot_defaults
 
 
 def qqplot(pvector, fig=None, ax=None, filename=None, figsize=(8, 8), pointcolor='black', title=None, linecolor='red'):
@@ -10,8 +12,8 @@ def qqplot(pvector, fig=None, ax=None, filename=None, figsize=(8, 8), pointcolor
     :param ax: matplotlib.pyplot axis to plot to (if not specified a new figure will be created)
     :param filename: Path to store the figure to (defaults to return fig, ax objects)
     :type filename: str.
-    :param figsize: Figure size
-    :type figsize: (int, int)
+    :param figsize: Figure size in inches (width, height)
+    :type figsize: (float, float)
     :param pointcolor: Color to use for points
     :type pointcolor: str.
     :param title: Main figure title.
@@ -21,6 +23,11 @@ def qqplot(pvector, fig=None, ax=None, filename=None, figsize=(8, 8), pointcolor
     :return: None, or (fig, ax)
 
     """
+    assert isinstance(pvector, pd.Series) or isinstance(pvector, np.ndarray), 'pvector should be pd.Series or np.ndarray'
+    assert len(pvector.shape) == 1, 'pvector should be 1D-array'
+    _assert_plot_defaults(fig=fig, ax=ax, filename=filename, pointcolor=pointcolor, linecolor=linecolor, title=title,
+                          figsize=figsize)
+
     pvector = pvector[~np.isnan(pvector)]
     pvector = pvector[~((pvector >= 1) | (pvector <= 0))]
     pvector.sort()

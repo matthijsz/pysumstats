@@ -6,33 +6,17 @@
 
 # Patch notes
 
-##### 13-05-2020 (v0.3.1)
- - Fixed an issue where reading data would fail when values in n, bp, chr columns were NA. An attempt is now made to impute these values. If too many are missing a ValueError is thrown.
+##### 15-05-2020 (v0.4)
+ - Fixed export so that saving to a file with '.gz' extension now actaully gzips the output file.
+ - Fixed data import to enable opening a pysumstats file saved as .pickle by initializing SumStats class. This will also check if the data is still stored when low_ram was set to True.
+ - Merging pysumstats now computes an overall MAF so meta-analyzed pysumstats can be reimported with pysumstats.
+ - Added assertions to verify input to all functions a user would use (plot functions, SumStats methods, and cov_matrix_from_phenotype_file)
+ - Added version number to SumStats objects.
+ - Added `kwargs` to SumStats.qc for filtering on custom columns.
+ - Added custom SumStats warnings. These warnings print always by default you can change this behavior with Pythons default [warnings](https://docs.python.org/3/library/warnings.html) filter.
+ - Reformatted [documentation](https://pysumstats.readthedocs.io/en/latest/), now also includes a guide on opening and saving sumstats.
+ - Moved older patch notes to [PATCHNOTES.md](PATCHNOTES.md) to prevent clutter in README
 
-##### 12-05-2020 (v0.3)
- - Added `fig` and `ax` arguments to `pysumstats.plot.qqplot` and `pysumstats.plot.manhattan` to enable plotting to existing figure and axis.
- - Added `pysumstats.plot.pzplot`, to visually compare Z-values from `B/SE` to Z-values calculated from the P-value.
- - Added `pysumstats.plot.afplot`, to plot allele frequency differences between summary statistics.
- - Added `pysumstats.plot.zzplot`, to plot differences in Z-values between summary statistics.
- - Added `qqplot`, `manhattan`, `pzplot`, `afplot`, `zzplot` functions to MergedSumStats object.
- - Added `pzplot` function to SumStats object.
- - Added `plot_all` functions to SumStats and MergedSumStats objects to automatically generate all possible plots for the object.
-
-##### 11-05-2020 (v0.2.3)
-
- - Added `return` statement to MergedSumStats.merge() when `inplace=False` and merging with other MergedSumstats.
- - Added docstrings to base, mergedsumstats, sumstats and utils.
- - Added [docs](https://pysumstats.readthedocs.io/en/latest/)
- - Fixed import errors and added `manhattan` and `qq` function to `SumStats` class
-
-##### 08-05-2020 (v0.2)
-
- - Added `plot` subpackage with `qqplot` and `manhattan`,  from  my initial [Python-QQMan module](https://github.com/matthijsz/qqman).
-
-##### 08-05-2020 (v0.1)
-
- - Adapted to be a package rather then a module.
- - Added `low_ram` argument to SumStats to read/write data to disk rather than RAM, in case of memory issues.  
 
 # Description
 
@@ -49,13 +33,14 @@ Using the pysumstats package for a publication, or something similar? That is **
 There is no publication attached to this package, 
 and I am not going to force anyone to reference me or make me a co-author or whatever, I want this to remain easily accessible. 
 But I would greatly appreciate it if you add a link to this github, or a reference to it in the acknowledgements or something like that. <br/>
-If you have any questions, want to help add methods or want to let me know you are planning a publication with this, you can get in touch via the [pypi website of this project](https://pypi.org/project/pysumstats/).
+If you have any questions, want to help add methods or want to let me know you are planning a publication with this, you can get in touch via the [pypi website of this project](https://pypi.org/project/pysumstats/). <br/>
+If you use the `.gwama()` method, please refer to the original publication: [Baselmans, et al. (2019)](https://www.nature.com/articles/s41588-018-0320-8).
 
 # Installation
 
 This package was made for Python 3.7. Clone the package directly from this github, or install with 
 
-`pip3 install pysumstats`
+`pip3 install --upgrade pysumstats`
 
 
 # Usage
@@ -90,7 +75,7 @@ s1.qc(maf=.01)
 s2.qc(maf=.01, hwe=1e-6, info=.9)
 s3.qc()  # MAF .01 is the default
 ```
-###### Merging sumstats, low_memory option is still experimental so be carefull with that
+###### Merging sumstats, low_memory option is still experimental so be careful with that
 `merge1 = s1.merge(s2)`
 
 ###### Meta analysis

@@ -6,13 +6,14 @@
 
 """
 import pandas as pd
-import warnings
+from .exceptions import sumstatswarn
 import pickle
 import os
 import copy
 import numpy as np
 import time
-
+import gzip
+from . import __version__
 
 class _Loc:
     """A helper class to enable sumstats.loc[] similar to pandas dataframes.
@@ -92,6 +93,7 @@ class _BaseSumStats:
 
     """
     def __init__(self):
+        self.__version__ = __version__
         self.loc = _Loc(self)
 
     def __len__(self):
@@ -184,7 +186,7 @@ class _BaseSumStats:
             print('No open connections')
             return None
         else:
-            print("Warning: pickled pysumstats will not work anymore.")
+            sumstatswarn("pickled pysumstats saved from this object will not work anymore.")
             self.data.close()
 
     def sort_values(self, by, inplace=True, **kwargs):
@@ -198,10 +200,14 @@ class _BaseSumStats:
         :return: Non
 
         """
+        assert isinstance(by, str), "by should be str"
+        assert isinstance(inplace, bool), "inplace should be True or False"
         if not inplace:
             raise NotImplementedError()
         if by == 'chr':
             pass
+        elif by not in self.data[1].columns:
+            raise AssertionError("{} not found in columns")
         else:
             for c in self.data.keys():
                 data = self.data[c]
@@ -227,26 +233,39 @@ class _BaseSumStats:
         :param kwargs: keyword arguments to be passed to pandas to_csv() function.
         :return: None
         """
+        assert isinstance(path, str), "path should be str"
+        assert isinstance(per_chromosome, bool), "per_chromosome should be True or False"
         if ('index' in kwargs.keys()) or ('header' in kwargs.keys()):
             raise KeyError('\'index\' and \'header\' arguments not supported.')
         if not per_chromosome:
             if path.endswith('.pickle'):
                 if self.low_ram:
-                    warnings.warn(
+                    sumstatswarn(
                         "Saving pysumstats as pickled objects with low_ram will not store the data in the pickled object.")
                 with open(path, 'wb') as f:
                     pickle.dump(self, f)
             else:
-                with open(path, 'w', newline='', encoding='utf-8') as f:
-                    for c, data in self.data.items():
-                        if c == 1:
-                            data.to_csv(f, index=False, **kwargs)
-                        else:
-                            data.to_csv(f, header=False, index=False, **kwargs)
+                if 'sep' not in kwargs.keys():
+                    if (path.endswith('.tsv')) or (path.endswith('.tsv.gz')) or (path.endswith('.txt')) or (path.endswith('.txt.gz')):
+                        kwargs['sep'] = '\t'
+                    elif (not path.endswith('.csv.gz')) and (not path.endswith('.csv')):
+                        raise KeyError('sep should be specified when the requeste output is not .tsv(.gz), .txt(.gz) or .csv(.gz)')
+                if path.endswith('.gz'):
+                    with gzip.open(path, 'wb') as f:
+                        for c, data in self.data.items():
+                            if c == 1:
+                                f.write(data.to_csv(index=False, **kwargs).encode('utf-8'))
+                            else:
+                                f.write(data.to_csv(index=False, **kwargs).encode('utf-8'))
+
+                else:
+                    with open(path, 'w', newline='', encoding='utf-8') as f:
+                        for c, data in self.data.items():
+                            if c == 1:
+                                data.to_csv(f, index=False, **kwargs)
+                            else:
+                                data.to_csv(f, header=False, index=False, **kwargs)
         else:
-            if (not path.endswith('.csv')) and (not path.endswith('.csv.gz')) and (not path.endswith('.txt')) and (
-            not path.endswith('.txt.gz')):
-                raise NotImplementedError('Saving files per chromosome only works with .csv(.gz) or .txt(.gz) files')
             for c, data in self.data.items():
                 if '{}' not in path:
                     data.to_csv('chr{}_'.format(c) + path, index=False, **kwargs)
@@ -279,6 +298,8 @@ class _BaseSumStats:
         :return: None
 
         """
+        assert isinstance(n, int), "n should be int"
+        assert isinstance(n_chromosomes, int), "n_chromosomes should be int"
         for n_chr in range(1, n_chromosomes + 1):
             print(self.data[n_chr].head(n, **kwargs))
 
@@ -293,6 +314,8 @@ class _BaseSumStats:
         :return: None
 
         """
+        assert isinstance(n, int), "n should be int"
+        assert isinstance(n_chromosomes, int), "n_chromosomes should be int"
         for n_chr in range(23, 23 - n_chromosomes):
             print(self.data[n_chr].tail(n, **kwargs))
 
@@ -348,6 +371,9 @@ class _BaseSumStats:
         :type kwargs: dict
         :return: None
         """
+        assert isinstance(dest, str), "dest should be str"
+        assert isinstance(prefix, str), "prefix should be str"
+        assert isinstance(kwargs, dict), "kwargs should be dict"
         if (prefix != '') and (not prefix.endswith('_')):
             prefix += '_'
         if not os.path.isdir(dest):

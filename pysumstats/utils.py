@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib.colors import is_color_like
+from collections.abc import Iterable
+import warnings
 
 class _MultiWindowPlot:
     """Helper class for generating multi-windowed plots (mainly for MergedSumStats plots)
@@ -18,6 +20,13 @@ class _MultiWindowPlot:
     :type shape: str
     """
     def __init__(self, n_plots, nrows=None, ncols=None, figsize=None, shape='rect'):
+        assert isinstance(nrows, int) or (nrows is None), "nrows should be an integer or None"
+        assert isinstance(ncols, int) or (ncols is None), "ncols should be an integer or None"
+        assert isinstance(figsize, Iterable) or (figsize is None), "figsize should be a list or tuple of 2 integers"
+        assert len(figsize) == 2, "figsize should be a list or tuple of 2 integers"
+        if isinstance(figsize, Iterable):
+            for o in figsize:
+                assert isinstance(o, int), "figsize should be a list or tuple of 2 integers"
         if (nrows is None) and (ncols is None):
             if shape == 'rect':
                 ncols = int(np.log2(n_plots/2))
@@ -80,6 +89,30 @@ class _MultiWindowPlot:
             return None
 
 
+def _recompute_maf(d, phenotypenames):
+    """Helper function to compute overall MAF
+
+    :param d: dataset
+    :type d: pandas.DataFrame
+    :param phenotypenames: phenotype names, names of ncolumns are assumed to be n_phenotype, maf columns: maf_phenotype
+    :type phenotypenames: list
+    :return: 1D array with recomputed MAF per SNP
+    """
+    ncols = ['n_{}'.format(x) for x in phenotypenames]
+    mafcols = ['maf_{}'.format(x) for x in phenotypenames]
+    ns, mafs = [], []
+    for ncol in ncols:
+        if ncol not in d.columns:
+            ns.append(np.repeat(1, len(d)).reshape((len(d), 1)))
+        else:
+            ns.append(d[ncol].to_numpy().reshape((len(d), 1)))
+    for mafcol in mafcols:
+        mafs.append(d[mafcol].to_numpy().reshape((len(d), 1)))
+    mafs = np.concatenate(mafs, axis=1)
+    ns = np.concatenate(ns, axis=1)
+    return (mafs * ns).sum(axis=1)/ns.sum(axis=1)
+
+
 def cov_matrix_from_phenotype_file(dataframe, phenotypes=None):
     """Function to generate a covariance (cov_Z) matrix from a phenotype file.
 
@@ -90,8 +123,15 @@ def cov_matrix_from_phenotype_file(dataframe, phenotypes=None):
     :return: pd.Dataframe of covariance matrix.
 
     """
+    assert isinstance(dataframe, pd.DataFrame), "dataframe should be pd.DataFrame"
     if phenotypes is None:
         phenotypes = list(dataframe.columns)
+    else:
+        missing_p = []
+        for p in phenotypes:
+            if p not in dataframe.columns:
+                missing_p.append(p)
+        raise ImportError('{} not found in columns of dataframe'.format(', '.join(missing_p)))
     cov_matrix = pd.DataFrame(0, index=phenotypes, columns=phenotypes)
     for p1 in phenotypes:
         cov_matrix.loc[p1, p1] = 1
