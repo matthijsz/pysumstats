@@ -9,6 +9,9 @@
 ##### 02-06-2020 (v0.4.1)
  - Fixed assertion issues that caused merging files and plotting merged files to fail.
 
+#### Previous
+Older patchnodes can be found in [PATCHNODES.md](PATCHNOTES.md)
+
 # Description
 
 A python package for working with GWAS summary statistics data in Python. <br/>
