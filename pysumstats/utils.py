@@ -23,7 +23,8 @@ class _MultiWindowPlot:
         assert isinstance(nrows, int) or (nrows is None), "nrows should be an integer or None"
         assert isinstance(ncols, int) or (ncols is None), "ncols should be an integer or None"
         assert isinstance(figsize, Iterable) or (figsize is None), "figsize should be a list or tuple of 2 integers"
-        assert len(figsize) == 2, "figsize should be a list or tuple of 2 integers"
+        if isinstance(figsize, Iterable):
+            assert len(figsize) == 2, "figsize should be a list or tuple of 2 integers"
         if isinstance(figsize, Iterable):
             for o in figsize:
                 assert isinstance(o, int), "figsize should be a list or tuple of 2 integers"
