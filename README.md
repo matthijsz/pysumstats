@@ -6,17 +6,8 @@
 
 # Patch notes
 
-##### 15-05-2020 (v0.4)
- - Fixed export so that saving to a file with '.gz' extension now actaully gzips the output file.
- - Fixed data import to enable opening a pysumstats file saved as .pickle by initializing SumStats class. This will also check if the data is still stored when low_ram was set to True.
- - Merging pysumstats now computes an overall MAF so meta-analyzed pysumstats can be reimported with pysumstats.
- - Added assertions to verify input to all functions a user would use (plot functions, SumStats methods, and cov_matrix_from_phenotype_file)
- - Added version number to SumStats objects.
- - Added `kwargs` to SumStats.qc for filtering on custom columns.
- - Added custom SumStats warnings. These warnings print always by default you can change this behavior with Pythons default [warnings](https://docs.python.org/3/library/warnings.html) filter.
- - Reformatted [documentation](https://pysumstats.readthedocs.io/en/latest/), now also includes a guide on opening and saving sumstats.
- - Moved older patch notes to [PATCHNOTES.md](PATCHNOTES.md) to prevent clutter in README
-
+##### 02-06-2020 (v0.4.1)
+ - Fixed assertion issues that caused merging files and plotting merged files to fail.
 
 # Description
 

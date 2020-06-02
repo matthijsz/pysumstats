@@ -1,5 +1,8 @@
 # Patch notes
 
+##### 02-06-2020 (v0.4.1)
+ - Fixed assertion issues that caused merging files and plotting merged files to fail.
+
 ##### 15-05-2020 (v0.4)
  - Fixed export so that aving to a file with '.gz' extension now actaully gzips the output file.
  - Fixed data import to enable opening a pysumstats file saved as .pickle by initializing SumStats class. This will also check if the data is still stored when low_ram was set to True.

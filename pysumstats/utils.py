@@ -76,7 +76,7 @@ class _MultiWindowPlot:
         return self.fig, ax
 
     def finish(self, filename, dpi):
-        """Finish the plot with given filename and dpi
+        """Finish the plot with given filename and dpi.
 
         :param filename: None, or path to target file (if None, (fig, ax) will be returned
         :param dpi: dpi setting to use when path is specified
@@ -91,7 +91,7 @@ class _MultiWindowPlot:
 
 
 def _recompute_maf(d, phenotypenames):
-    """Helper function to compute overall MAF
+    """Helper function to compute overall MAF.
 
     :param d: dataset
     :type d: pandas.DataFrame

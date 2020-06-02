@@ -35,7 +35,7 @@ class SumStats(_BaseSumStats):
 
     def __init__(self, path, phenotype=None, gwas_n=None, column_names=None, data=None, low_ram=False,
                  tmpdir='sumstats_temporary', **kwargs):
-        assert isinstance(path, str),  "path should be str"
+        assert isinstance(path, str) or (path is None),  "path should be str"
         assert isinstance(phenotype, str) or (phenotype is None), "phenotype should be str"
         assert isinstance(gwas_n, int) or gwas_n is None, "gwas_n should be int"
         assert isinstance(low_ram, bool), "low_ram should be True or False"
