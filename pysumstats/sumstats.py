@@ -25,7 +25,7 @@ class SumStats(_BaseSumStats):
     :type column_names: dict
     :param data: Dataset for the new SumStats object, in general, don't specify this.
     :type data: dict
-    :param low_ram: Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will gratly decrease processing speed.
+    :param low_ram: Whether to use the low_ram option for this SumStats object. Use this only when running into MemoryErrors. Enabling this option will read/write data from local storage rather then RAM. It will save lots of RAM, but it will significantly decrease processing speed.
     :type low_ram: bool
     :param tmpdir: Which directory to store the temporary files if low_ram is enabled.
     :type tmpdir: str
@@ -311,6 +311,8 @@ class SumStats(_BaseSumStats):
                 sumstatswarn('No sample size column found for {}, using 1 for calculation of overall MAF'.format(self.phenotype_name))
             if 'n' not in other.columns:
                 sumstatswarn('No sample size column found for {}, using 1 for calculation of overall MAF'.format(other.phenotype_name))
+            if low_memory and (not how == 'inner'):
+                raise NotImplementedError('low_memory only allows for an inner merge.')
             for c in range(1, 24):
                 data_x = self.data[c].copy()
                 merge_info['xlen'] += len(data_x)
@@ -668,6 +670,8 @@ class MergedSumStats(_BaseSumStats):
                     newmerged.merge(o, True, low_memory)
                 return newmerged
         else:
+            if low_memory and (not how == 'inner'):
+                raise NotImplementedError('low_memory only allows for an inner merge.')
             if other.phenotype_name is not None:
                 if other.phenotype_name in self.pheno_names:
                     sumstatswarn(

@@ -169,6 +169,20 @@ class _BaseSumStats:
             else:
                 raise IndexError('Length of input ({}) does not match data length ({}).'.format(len(value), len(self)))
 
+    @staticmethod
+    def _extract_phenotype(data, phe):
+        """Internal function to extract phenotype from MergedSumStats objects.
+        :param data: pd.Dataframe
+        :param phe: phenotype to extract
+        :return: pd.Dataframe with extracted phenotype
+        """
+        if phe is None:
+            return data
+        else:
+            extracts = ['rsid', 'chr', 'bp', 'ea', 'oa']+[x for x in data.columns if x.endswith('_'+phe)]
+            renames = {x: x.replace('_'+phe, '') for x in data.columns if x.endswith('_'+phe)}
+            return data[extracts].rename(columns=renames)
+
     def copy(self):
         """
 
@@ -223,13 +237,17 @@ class _BaseSumStats:
         """
         return pd.concat([self.data[c] for c in self.data.keys()]).groupby(*args, **kwargs)
 
-    def save(self, path, per_chromosome=False, **kwargs):
+    def save(self, path, per_chromosome=False, per_phenotype=False, phenotype=None, **kwargs):
         """Save the data held in this object to local storage.
 
-        :param path: Relative or full path to the target file to store the data or object in. Paths ending in .pickle will save a pickled version of the full object. Note that with low_ram enabled this will **not** store the data.
+        :param path: Relative or full path to the target file to store the data or object in. Paths ending in .pickle will save a pickled version of the full object. Note that with low_ram enabled this will **not** store the data. When per_phenotype is specified, add {} to the path where the phenotype name should be, if {} is not in the string, the filename will be prefixed with phenotype name.
         :type path: str
         :param per_chromosome: Whether to save seperate files for each chromosome.
         :type per_chromosome: bool
+        :param per_phenotype: Set to True to create a separate file for each phenotype in MergedSumStats objects
+        :type per_phenotype
+        :param phenotype: Only save a file for a specifici phenotype in MergedSumstats objects
+        :type phenotype: str
         :param kwargs: keyword arguments to be passed to pandas to_csv() function.
         :return: None
         """
@@ -237,40 +255,51 @@ class _BaseSumStats:
         assert isinstance(per_chromosome, bool), "per_chromosome should be True or False"
         if ('index' in kwargs.keys()) or ('header' in kwargs.keys()):
             raise KeyError('\'index\' and \'header\' arguments not supported.')
-        if not per_chromosome:
-            if path.endswith('.pickle'):
-                if self.low_ram:
-                    sumstatswarn(
-                        "Saving pysumstats as pickled objects with low_ram will not store the data in the pickled object.")
-                with open(path, 'wb') as f:
-                    pickle.dump(self, f)
-            else:
-                if 'sep' not in kwargs.keys():
-                    if (path.endswith('.tsv')) or (path.endswith('.tsv.gz')) or (path.endswith('.txt')) or (path.endswith('.txt.gz')):
-                        kwargs['sep'] = '\t'
-                    elif (not path.endswith('.csv.gz')) and (not path.endswith('.csv')):
-                        raise KeyError('sep should be specified when the requeste output is not .tsv(.gz), .txt(.gz) or .csv(.gz)')
-                if path.endswith('.gz'):
-                    with gzip.open(path, 'wb') as f:
-                        for c, data in self.data.items():
-                            if c == 1:
-                                f.write(data.to_csv(index=False, **kwargs).encode('utf-8'))
-                            else:
-                                f.write(data.to_csv(index=False, **kwargs).encode('utf-8'))
-
-                else:
-                    with open(path, 'w', newline='', encoding='utf-8') as f:
-                        for c, data in self.data.items():
-                            if c == 1:
-                                data.to_csv(f, index=False, **kwargs)
-                            else:
-                                data.to_csv(f, header=False, index=False, **kwargs)
+        if (per_phenotype and (self.phenotype_name is not None)) or ((phenotype is not None) and (self.phenotype_name is not None)):
+            sumstatswarn("per_phenotype and phenotype ignored for SumStats object")
+            self.save(path, per_chromosome, per_phenotype=False, phenotype=None, **kwargs)
+        elif per_phenotype:
+            if phenotype is not None:
+                sumstatswarn("phenotype ignored when per_phenotype is True")
+            if '{}' not in path:
+                path = '{}_' + path
+            for p in self.pheno_names:
+                self.save(path.format(p), per_chromosome, per_phenotype=False, phenotype=p, **kwargs)
         else:
-            for c, data in self.data.items():
-                if '{}' not in path:
-                    data.to_csv('chr{}_'.format(c) + path, index=False, **kwargs)
+            if not per_chromosome:
+                if path.endswith('.pickle'):
+                    if self.low_ram:
+                        sumstatswarn(
+                            "Saving pysumstats as pickled objects with low_ram will not store the data in the pickled object.")
+                    with open(path, 'wb') as f:
+                        pickle.dump(self, f)
                 else:
-                    data.to_csv(path.format(c), index=False, **kwargs)
+                    if 'sep' not in kwargs.keys():
+                        if (path.endswith('.tsv')) or (path.endswith('.tsv.gz')) or (path.endswith('.txt')) or (path.endswith('.txt.gz')):
+                            kwargs['sep'] = '\t'
+                        elif (not path.endswith('.csv.gz')) and (not path.endswith('.csv')):
+                            raise KeyError('sep should be specified when the requeste output is not .tsv(.gz), .txt(.gz) or .csv(.gz)')
+                    if path.endswith('.gz'):
+                        with gzip.open(path, 'wb') as f:
+                            for c, data in self.data.items():
+                                if c == 1:
+                                    f.write(self._extract_phenotype(data, phenotype).to_csv(index=False, **kwargs).encode('utf-8'))
+                                else:
+                                    f.write(self._extract_phenotype(data, phenotype).to_csv(index=False, **kwargs).encode('utf-8'))
+
+                    else:
+                        with open(path, 'w', newline='', encoding='utf-8') as f:
+                            for c, data in self.data.items():
+                                if c == 1:
+                                    self._extract_phenotype(data, phenotype).to_csv(f, index=False, **kwargs)
+                                else:
+                                    self._extract_phenotype(data, phenotype).to_csv(f, header=False, index=False, **kwargs)
+            else:
+                for c, data in self.data.items():
+                    if '{}' not in path:
+                        self._extract_phenotype(data, phenotype).to_csv('chr{}_'.format(c) + path, index=False, **kwargs)
+                    else:
+                        self._extract_phenotype(data, phenotype).to_csv(path.format(c), index=False, **kwargs)
 
     def reset_index(self):
         """ Reset the index of the data.
