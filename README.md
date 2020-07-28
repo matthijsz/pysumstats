@@ -10,7 +10,7 @@
  - Fixed assertion issues that caused merging files and plotting merged files to fail.
 
 #### Previous
-Older patchnodes can be found in [PATCHNODES.md](PATCHNOTES.md)
+Older patchnodes can be found in [PATCHNOTES.md](PATCHNOTES.md)
 
 # Description
 
