@@ -6,10 +6,10 @@
 
 # Patch notes
 
-##### 28-07-2020 (v0.4.2)
- - Added an NotImplementedError when attempting to merge with `low_memory` and a `method` other than inner.
- - Added per_phenotype argument to `.save()` to save separate files for each phenotype in `MergedSumStats` objects.
- - Added phenotype argument to `.save()` to save file for a specific phenotype in `MergedSumstats` objects.
+##### 04-09-2020 (v0.4.3)
+ - Bugfix: .describe() now returns min and max instead of min and min
+ - Bugfix: .qc() now works with any column
+ 
 
 #### Previous
 Older patchnodes can be found in [PATCHNOTES.md](PATCHNOTES.md)

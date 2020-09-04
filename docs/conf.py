@@ -26,7 +26,7 @@ copyright = '2020, Matthijs D. van der Zee'
 author = 'Matthijs D. van der Zee'
 
 # The full version, including alpha/beta/rc tags
-release = '0.4.2'
+release = '0.4.3'
 
 # -- General configuration ---------------------------------------------------
 

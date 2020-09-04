@@ -373,7 +373,7 @@ class _BaseSumStats:
                 if 'mean' in summ.index:
                     summ.loc['count', 'full'] = summ.loc['count', :].sum(axis=0)
                     summ.loc['min', 'full'] = summ.loc['min', :].min(axis=0)
-                    summ.loc['max', 'full'] = summ.loc['min', :].max(axis=0)
+                    summ.loc['max', 'full'] = summ.loc['max', :].max(axis=0)
                     n = summ.loc['count', 'full']
                     t = summ.transpose()
                     t['m_w'] = (t['mean'] * t['count']) / n

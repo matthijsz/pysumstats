@@ -257,6 +257,7 @@ class SumStats(_BaseSumStats):
                 raise KeyError('Column {} not found.'.format(k))
             else:
                 qc_vals[k] = v
+                qc_info[k] = 0
         for c in range(1, 24):
             data = self.data[c]
             qc_info['org_len'] += len(data)
