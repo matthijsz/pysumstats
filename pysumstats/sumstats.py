@@ -190,7 +190,7 @@ class SumStats(_BaseSumStats):
         try:
             self.data['chr'] = self.data['chr'].astype(int)
         except ValueError:
-            self.data['chr'].str.replace('X', '23')
+            self.data['chr'] = self.data['chr'].str.replace('X', '23')
             try:
                 self.data['chr'] = self.data['chr'].astype(int)
             except ValueError:

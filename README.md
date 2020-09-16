@@ -6,9 +6,8 @@
 
 # Patch notes
 
-##### 04-09-2020 (v0.4.3)
- - Bugfix: .describe() now returns min and max instead of min and min
- - Bugfix: .qc() now works with any column
+##### 16-09-2020 (v0.4.4)
+ - Bugfix: Chromosome X now properly converted to 23
  
 
 #### Previous
