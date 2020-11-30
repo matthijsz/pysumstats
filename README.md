@@ -9,6 +9,8 @@
 ##### 30-11-2020 (v0.4.5)
  - Fix: Merge using a list of SumStats now propagates arguments properly
  - Fix: Meta analyzing now properly sums N across all summary statistics
+ - Fix: Fixed an issue that would prevent proper outer merge
+
  
 
 #### Previous

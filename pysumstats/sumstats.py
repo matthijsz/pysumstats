@@ -744,7 +744,7 @@ class MergedSumStats(_BaseSumStats):
                     o_id = pd.DataFrame(odat['rsid'])
                     s_id['s_idx'] = s_id.index
                     o_id['o_idx'] = o_id.index
-                    idm = s_id.merge(o_id, on='rsid')
+                    idm = s_id.merge(o_id, on='rsid', how=how)
                     sdat.rename(columns={'ea': 'ea_x', 'oa': 'oa_x'}, inplace=True)
                     odat.rename(columns={'ea': 'ea_y', 'oa': 'oa_y'}, inplace=True)
                     other_cols = [x for x in odat.columns if x not in ['rsid', 'chr', 'bp']]
