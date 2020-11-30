@@ -285,8 +285,8 @@ class SumStats(_BaseSumStats):
         if isinstance(other, list):
             for o in other:
                 assert isinstance(o, SumStats), "items in other should be SumStats"
-            merged = self.merge(other[0], low_memory=low_memory)
-            merged.merge(other[1:], inplace=True, low_memory=low_memory)
+            merged = self.merge(other[0], how=how, low_memory=low_memory)
+            merged.merge(other[1:], how=how, inplace=True, low_memory=low_memory)
             return merged
         else:
             if self.phenotype_name == other.phenotype_name:
@@ -541,7 +541,7 @@ class MergedSumStats(_BaseSumStats):
             n_dat.loc[:, 'p'] = norm.sf(abs(n_dat.loc[:, 'z'])) * 2
             n_dat['n'] = 0
             for p in self.pheno_names:
-                if 'n_{}'.format(p) in n_dat.columns:
+                if 'n_{}'.format(p) in data.columns:
                     n_dat['n'] += data['n_{}'.format(p)]
             new_data[c] = n_dat
         new_columns = list(new_data[c].columns)
@@ -664,11 +664,11 @@ class MergedSumStats(_BaseSumStats):
         if isinstance(other, list):
             if inplace:
                 for o in other:
-                    self.merge(o, True, low_memory)
+                    self.merge(o, True, how=how, low_memory=low_memory)
             else:
-                newmerged = self.merge(other[0], False, low_memory)
+                newmerged = self.merge(other[0], False, how=how, low_memory=low_memory)
                 for o in other[1:]:
-                    newmerged.merge(o, True, low_memory)
+                    newmerged.merge(o, True, how=how, low_memory=low_memory)
                 return newmerged
         else:
             if low_memory and (not how == 'inner'):

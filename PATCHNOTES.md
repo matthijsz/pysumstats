@@ -1,5 +1,9 @@
 # Patch notes
 
+##### 30-11-2020 (v0.4.5)
+ - Fix: Merge using a list of SumStats now propagates arguments properly
+ - Fix: Meta analyzing now properly sums N across all summary statistics
+
 ##### 16-09-2020 (v0.4.4)
  - Bugfix: Chromosome X now properly converted to 23
 
