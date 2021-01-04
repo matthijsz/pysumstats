@@ -6,11 +6,10 @@
 
 # Patch notes
 
-##### 30-11-2020 (v0.4.6)
- - Fix: Merge using a list of SumStats now propagates arguments properly
- - Fix: Meta analyzing now properly sums N across all summary statistics
- - Fix: Fixed an issue that would prevent proper outer merge
-
+##### 04-01-2021 (v0.5)
+ - Please update to this version! Merging and meta analyses did not work properly in previous versions.
+ - For now using `MergedSumStats.meta_analyze()` will instead run `.gwama()` with an identity matrix (functionally identical to `.meta_analyze(method='ivw')`), as this appears to work reliably.
+ 
  
 
 #### Previous

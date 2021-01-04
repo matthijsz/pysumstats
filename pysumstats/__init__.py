@@ -3,7 +3,7 @@ pysumstats, a python package for working with GWAS summary statistics
 
 .. moduleauthor:: Matthijs D. van der Zee <m.d.vander.zee@vu.nl>
 """
-__version__ = '0.4.6'
+__version__ = '0.5'
 __author__ = 'Matthijs D. van der Zee'
 __all__ = ['SumStats', 'cov_matrix_from_phenotype_file', 'plot', 'SumStatsWarning']
 
