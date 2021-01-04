@@ -341,9 +341,14 @@ class SumStats(_BaseSumStats):
                 else:
                     joined_x = ['rsid', 'chr', 'bp'] + [x + '_' + self.phenotype_name for x in joined if
                                                         x not in ['rsid', 'chr', 'bp']]
-                    joined_y = ['rsid'] + [x + '_' + other.phenotype_name for x in joined if
+                    joined_y = ['rsid', 'chr_y', 'bp_y'] + [x + '_' + other.phenotype_name for x in joined if
                                            x not in ['rsid', 'chr', 'bp']]
+                    data_m_y = data_m_y.rename(columns={'chr': 'chr_y', 'bp': 'bp_y'})
                     merged_data[c] = data_m_x[joined_x].merge(data_m_y[joined_y], on='rsid', how=how)
+                    merged_data[c].loc[merged_data[c]['chr'].isna(), 'chr'] = merged_data[c].loc[merged_data[c]['chr'].isna(), 'chr_y']
+                    merged_data[c].loc[merged_data[c]['bp'].isna(), 'bp'] = merged_data[c].loc[
+                        merged_data[c]['bp'].isna(), 'bp_y']
+                    merged_data[c] = merged_data[c].drop(axis=1, labels=['chr_y', 'bp_y'])
                 merged_data[c]['maf'] = _recompute_maf(merged_data[c], [self.phenotype_name, other.phenotype_name])
                 merge_info['newlen'] += len(merged_data[c])
             return MergedSumStats(data=merged_data, phenotypes=[self.phenotype_name, other.phenotype_name],
@@ -469,6 +474,10 @@ class MergedSumStats(_BaseSumStats):
         dropped = 0
         for c in self.data.keys():
             data = self.data[c].copy()
+            data.loc[data[eax].isna(), eax] = data.loc[data[eax].isna(), eay]
+            data.loc[data[oax].isna(), oax] = data.loc[data[oax].isna(), oay]
+            data.loc[data[eay].isna(), eay] = data.loc[data[eay].isna(), eax]
+            data.loc[data[oay].isna(), oay] = data.loc[data[oay].isna(), oax]
             org_len = len(data)
             for a in [eax, oax, eay, oay]:
                 data[a] = data[a].astype(str)
@@ -480,9 +489,9 @@ class MergedSumStats(_BaseSumStats):
             for fy in eafys + oafys:
                 if fy in data.columns:
                     data.loc[flip, fy] = abs(1 - data.loc[flip, fy])
-            data2 = data.loc[data[eax] == data[eay], :].copy()
-            data2 = data2.loc[data2[oax] == data2[oay], :].copy()
-            dropped += (org_len - len(data))
+            data2 = data.loc[(data[eax] == data[eay]), :].copy()
+            data2 = data2.loc[(data2[oax] == data2[oay]), :].copy()
+            dropped += (org_len - len(data2))
             data2.drop(axis=1, labels=[eay, oay], inplace=True)
             data2.rename(columns={eax: 'ea', oax: 'oa'}, inplace=True)
             self.data[c] = data2
@@ -491,13 +500,16 @@ class MergedSumStats(_BaseSumStats):
             sumstatswarn('Dropped {} SNPs due to allele mismatch'.format(dropped))
         self.suffixes = [None, None]
 
-    def meta_analyze(self, name='meta', method='ivw'):
+    def meta_analyze(self, name='meta', method='ivw', debug=False):
         """Meta analyze all GWAS summary statistics contained in this object.
-
+        WARNING: There appears to be an error somewhere in this function that causes incorrect result.
+        For now running .meta_analyze() will instead run .gwama() with an identity matrix (functionally identical to an ivw meta_analysis)
         :param name: New phenotype name to use for the new SumStats object (default: 'meta')
         :type name: str
         :param method: Meta-analysis method to use, should be one of ['ivw', 'samplesize'], default: 'ivw'
         :type method: str
+        :param debug: Run the meta_analyze function instead of .gwama() for debugging purposes
+        :type debug: bool
         :return: :class:`pysumstats.SumStats` object.
 
         """
@@ -508,46 +520,55 @@ class MergedSumStats(_BaseSumStats):
             new_data = _H5SSConnection(name, tmpdir=self.tmpdir)
         if method not in ['ivw', 'samplesize']:
             raise KeyError('method should be one of [\'ivw\', \'samplesize\']')
-        columns = self.data[1].columns
-        missing_n = []
-        for p in self.pheno_names:
-            if 'n_{}'.format(p) not in columns:
-                missing_n.append(p)
-        if len(missing_n) > 0:
-            if method == 'samplesize':
-                raise KeyError('Missing sample size column for {}.'.format(', '.join(missing_n)))
-            else:
-                sumstatswarn('Missing sample size column for {}, output N will be incorrect.'.format(', '.join(missing_n)))
-        for c in self.data.keys():
-            data = self.data[c]
-            n_dat = data[['rsid', 'chr', 'bp', 'ea', 'oa', 'maf']]
-            if method == 'samplesize':
-                for p in self.pheno_names:
-                    data.loc[:, 'z_{}'.format(p)] = data['b_{}'.format(p)] / data['se_{}'.format(p)]
-                    data.loc[:, 'w_{}'.format(p)] = np.sqrt(data['n_{}'.format(p)])
-                    data.loc[:, 'z_{}'.format(p)] = data['z_{}'.format(p)] * data['w_'.format(p)]
-                zsums = data[['z_'.format(x) for x in self.pheno_names]].sum(axis=1)
-                wsums = data[['w_'.format(x) for x in self.pheno_names]].sum(axis=1)
-                n_dat.loc[:, 'z'] = zsums / np.sqrt(np.sum(wsums ** 2))
-            else:
-                for p in self.pheno_names:
-                    data.loc[:, 'w_{}'.format(p)] = 1 / (data.loc[:, 'se_{}'.format(p)] ** 2)
-                    data.loc[:, 'bw_{}'.format(p)] = data.loc[:, 'b_{}'.format(p)] * data.loc[:, 'w_{}'.format(p)]
-                bwsums = data[['bw_{}'.format(x) for x in self.pheno_names]].sum(axis=1)
-                wsums = data[['w_{}'.format(x) for x in self.pheno_names]].sum(axis=1)
-                n_dat.loc[:, 'se'] = np.sqrt(1 / wsums)
-                n_dat.loc[:, 'b'] = bwsums / wsums
-                n_dat.loc[:, 'z'] = n_dat.loc[:, 'b'] / n_dat.loc[:, 'se']
-            n_dat.loc[:, 'p'] = norm.sf(abs(n_dat.loc[:, 'z'])) * 2
-            n_dat['n'] = 0
+        if not debug:
+            sumstatswarn("The meta_analyze function is currently bugged. .gwama() with an identity matrix is now performed instead.")
+            id_mat = pd.DataFrame(np.identity(len(self.pheno_names)), columns=self.pheno_names, index=self.pheno_names)
+            return self.gwama(cov_matrix=id_mat, name=name)
+        else:
+            sumstatswarn("Warning: Please do not use the results of this function without extensive verification!")
+            columns = self.data[1].columns
+            missing_n = []
             for p in self.pheno_names:
-                if 'n_{}'.format(p) in data.columns:
-                    n_dat['n'] += data['n_{}'.format(p)]
-            new_data[c] = n_dat
-        new_columns = list(new_data[c].columns)
-        new_data = SumStats(path=None, phenotype=name, data=new_data)
-        new_data.variables = new_columns
-        return new_data
+                if 'n_{}'.format(p) not in columns:
+                    missing_n.append(p)
+            if len(missing_n) > 0:
+                if method == 'samplesize':
+                    raise KeyError('Missing sample size column for {}.'.format(', '.join(missing_n)))
+                else:
+                    sumstatswarn('Missing sample size column for {}, output N will be incorrect.'.format(', '.join(missing_n)))
+            for c in self.data.keys():
+                data = self.data[c]
+
+                n_dat = data[['rsid', 'chr', 'bp', 'ea', 'oa', 'maf']]
+                if method == 'samplesize':
+                    for p in self.pheno_names:
+                        data.loc[data['b_{}'.format(p)].isna(), 'b_{}'.format(p)] = 0
+                        data.loc[data['se_{}'.format(p)].isna(), 'se_{}'.format(p)] = 1
+                        data.loc[:, 'z_{}'.format(p)] = data['b_{}'.format(p)] / data['se_{}'.format(p)]
+                        data.loc[:, 'w_{}'.format(p)] = np.sqrt(data['n_{}'.format(p)])
+                        data.loc[:, 'z_{}'.format(p)] = data['z_{}'.format(p)] * data['w_'.format(p)]
+                    zsums = data[['z_'.format(x) for x in self.pheno_names]].sum(axis=1)
+                    wsums = data[['w_'.format(x) for x in self.pheno_names]].sum(axis=1)
+                    n_dat.loc[:, 'z'] = zsums / np.sqrt(np.sum(wsums ** 2))
+                else:
+                    for p in self.pheno_names:
+                        data.loc[:, 'w_{}'.format(p)] = 1 / (data.loc[:, 'se_{}'.format(p)] ** 2)
+                        data.loc[:, 'bw_{}'.format(p)] = data.loc[:, 'b_{}'.format(p)] * data.loc[:, 'w_{}'.format(p)]
+                    bwsums = data[['bw_{}'.format(x) for x in self.pheno_names]].sum(axis=1)
+                    wsums = data[['w_{}'.format(x) for x in self.pheno_names]].sum(axis=1)
+                    n_dat.loc[:, 'se'] = np.sqrt(1 / wsums)
+                    n_dat.loc[:, 'b'] = bwsums / wsums
+                    n_dat.loc[:, 'z'] = n_dat.loc[:, 'b'] / n_dat.loc[:, 'se']
+                n_dat.loc[:, 'p'] = norm.sf(abs(n_dat.loc[:, 'z'])) * 2
+                n_dat['n'] = 0
+                for p in self.pheno_names:
+                    if 'n_{}'.format(p) in data.columns:
+                        n_dat['n'] += data['n_{}'.format(p)]
+                new_data[c] = n_dat
+            new_columns = list(new_data[c].columns)
+            new_data = SumStats(path=None, phenotype=name, data=new_data)
+            new_data.variables = new_columns
+            return new_data
 
     def gwama(self, cov_matrix=None, h2_snp=None, name='gwama'):
         """Multivariate meta analysis as described in Baselmans, et al. 2019.
@@ -612,6 +633,11 @@ class MergedSumStats(_BaseSumStats):
         for c in range(1, 24):
             n_dat = self.data[c][['rsid', 'chr', 'bp', 'ea', 'oa', 'maf']].copy()
             data = self.data[c]
+            for p in self.pheno_names:
+                data.loc[data['n_{}'.format(p)].isna(), 'n_{}'.format(p)] = 0
+                data.loc[data['b_{}'.format(p)].isna(), 'b_{}'.format(p)] = 0
+                data.loc[data['se_{}'.format(p)].isna(), 'se_{}'.format(p)] = 1
+                data.loc[data['eaf_{}'.format(p)].isna(), 'eaf_{}'.format(p)] = 0
             for p in self.pheno_names:
                 data['z_{}'.format(p)] = data['b_{}'.format(p)] / data['se_{}'.format(p)]
                 data['w_{}'.format(p)] = np.sqrt(data['n_{}'.format(p)] * h2_snp[p])
@@ -710,9 +736,15 @@ class MergedSumStats(_BaseSumStats):
                             data_m_y.drop(axis=1, labels=[x], inplace=True)
                         merged_data[c].sort_values(by='bp', inplace=True)
                     else:
-                        joined_y = ['rsid'] + [x + '_' + other.phenotype_name for x in joined if
-                                               x not in ['rsid', 'chr', 'bp']]
+                        joined_y = ['rsid', 'chr_y', 'bp_y'] + [x + '_' + other.phenotype_name for x in joined if
+                                                                x not in ['rsid', 'chr', 'bp']]
+                        data_m_y = data_m_y.rename(columns={'chr': 'chr_y', 'bp': 'bp_y'})
                         merged_data[c] = data_x.merge(data_m_y[joined_y], on='rsid', how=how)
+                        merged_data[c].loc[merged_data[c]['chr'].isna(), 'chr'] = merged_data[c].loc[
+                            merged_data[c]['chr'].isna(), 'chr_y']
+                        merged_data[c].loc[merged_data[c]['bp'].isna(), 'bp'] = merged_data[c].loc[
+                            merged_data[c]['bp'].isna(), 'bp_y']
+                        merged_data[c] = merged_data[c].drop(axis=1, labels=['chr_y', 'bp_y'])
                     merged_data[c]['maf'] = _recompute_maf(merged_data[c], self.pheno_names + [other.phenotype_name])
                     merge_info['newlen'] += len(merged_data[c])
                     new_phenos = self.pheno_names + [other.phenotype_name]
@@ -744,7 +776,7 @@ class MergedSumStats(_BaseSumStats):
                     o_id = pd.DataFrame(odat['rsid'])
                     s_id['s_idx'] = s_id.index
                     o_id['o_idx'] = o_id.index
-                    idm = s_id.merge(o_id, on='rsid', how=how)
+                    idm = s_id.merge(o_id, on='rsid')
                     sdat.rename(columns={'ea': 'ea_x', 'oa': 'oa_x'}, inplace=True)
                     odat.rename(columns={'ea': 'ea_y', 'oa': 'oa_y'}, inplace=True)
                     other_cols = [x for x in odat.columns if x not in ['rsid', 'chr', 'bp']]
