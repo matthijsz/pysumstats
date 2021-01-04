@@ -104,11 +104,11 @@ def _recompute_maf(d, phenotypenames):
     ns, mafs = [], []
     for ncol in ncols:
         if ncol not in d.columns:
-            ns.append(np.repeat(1, len(d)).reshape((len(d), 1)))
+            ns.append(np.repeat(0, len(d)).reshape((len(d), 1)))
         else:
-            ns.append(d[ncol].to_numpy().reshape((len(d), 1)))
+            ns.append(d[ncol].fillna(0).values.reshape((len(d), 1)))
     for mafcol in mafcols:
-        mafs.append(d[mafcol].to_numpy().reshape((len(d), 1)))
+        mafs.append(d[mafcol].fillna(0).values.reshape((len(d), 1)))
     mafs = np.concatenate(mafs, axis=1)
     ns = np.concatenate(ns, axis=1)
     return (mafs * ns).sum(axis=1)/ns.sum(axis=1)
