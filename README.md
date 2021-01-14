@@ -6,7 +6,7 @@
 
 # Patch notes
 
-##### 14-01-2021 (v0.5.1)
+##### 14-01-2021 (v0.5.2)
  - Please update to this version! Merging and meta analyses did not work properly in previous versions.
  - Fixed issue with MAF calculation in .gwama()
  

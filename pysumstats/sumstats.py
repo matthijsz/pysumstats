@@ -655,7 +655,7 @@ class MergedSumStats(_BaseSumStats):
             n_dat['eaf'] = np.array(
                 [data['n_{}'.format(p)] * data['eaf_{}'.format(p)] for p in self.pheno_names]).sum(
                 axis=0) / n_obs
-            n_dat['maf'] = pd.concat([n_dat['eaf'], (1 - n_dat['eaf'])], axis=1).min(axis=1).hist()
+            n_dat['maf'] = pd.concat([n_dat['eaf'], (1 - n_dat['eaf'])], axis=1).min(axis=1)
             n_dat['b'] = n_dat['z'] / np.sqrt(n_obs * 2 * n_dat['eaf'] * (1 - n_dat['eaf']))
             n_dat['se'] = (1 / np.sqrt(n_obs)) * (1 / np.sqrt(2 * n_dat['eaf'] * (1 - n_dat['eaf'])))
             new_data[c] = n_dat
