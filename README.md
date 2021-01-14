@@ -6,10 +6,9 @@
 
 # Patch notes
 
-##### 04-01-2021 (v0.5.0)
+##### 14-01-2021 (v0.5.1)
  - Please update to this version! Merging and meta analyses did not work properly in previous versions.
- - For now using `MergedSumStats.meta_analyze()` will instead run `.gwama()` with an identity matrix (functionally identical to `.meta_analyze(method='ivw')`), as this appears to work reliably.
- 
+ - Fixed issue with MAF calculation in .gwama()
  
 
 #### Previous
